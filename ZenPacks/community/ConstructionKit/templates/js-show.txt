@@ -1,0 +1,26 @@
+(function(){
+            var ZC = Ext.ns('Zenoss.component');
+        
+            function render_link(ob) {
+                if (ob && ob.uid) {
+                    return Zenoss.render.link(ob.uid);
+                } else {
+                    return ob;
+                }
+            }
+        
+            ZC.%sPanel = Ext.extend(ZC.ComponentGridPanel, {
+                constructor: function(config) {
+                    config = Ext.applyIf(config||{}, {
+                        componentType: '%s',
+                        fields: %s,
+                        columns:%s
+                    });
+                    ZC.%sPanel.superclass.constructor.call(this, config);
+                }
+            });
+            
+            Ext.reg('%sPanel', ZC.%sPanel);
+            ZC.registerName('%s', _t('%s'), _t('%s'));
+            
+            })(); 
