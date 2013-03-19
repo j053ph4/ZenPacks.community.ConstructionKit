@@ -223,10 +223,10 @@ class Construct():
                 if v['isReference'] == True: # set the property to a device attribute 
                     override += '''    setattr(component,"%s",target.%s)\n''' % (k,v['default'])
                 else:  # set the property to the literal value provided
-                    if v['type'] == 'boolean':
-                        override += '''    setattr(component,"%s","%s")\n''' % (k,v['default'])
-                    else:
+                    if v['type'] == 'string':
                         override += '''    setattr(component,"%s","'%s'")\n''' % (k,v['default'])
+                    else:
+                        override += '''    setattr(component,"%s","%s")\n''' % (k,v['default'])
         return override
     
     def buildAddMethods(self):
@@ -265,10 +265,10 @@ class Construct():
                     if isReference == True:
                         output += """    %s = ''\n""" % k
                     else:
-                        if v['type'] == 'boolean':
-                            output += """    %s = %s\n""" % (k,v['default'])
-                        else:
+                        if v['type'] == 'string':
                             output += """    %s = '%s'\n""" % (k,v['default'])
+                        else:
+                            output += """    %s = %s\n""" % (k,v['default'])
                 else:
                     output += """    %s = %s\n""" % (k,v['default'])
             else:
