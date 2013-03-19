@@ -13,7 +13,7 @@ class %s(ZenPackPersistence, RRDDataSource):
     ZENPACKID = '%s'
     sourcetypes = (DATASOURCE,)
     sourcetype = DATASOURCE
-    eventClass = %s
+    eventClass = '%s'
     cycletime = %s
     timeout = %s
     component = %s
