@@ -1,0 +1,18 @@
+'''
+args : dsinterface,dsinterfaceproperties
+'''
+
+# datasource interface
+from Products.Zuul.interfaces import IRRDDataSourceInfo
+from Products.Zuul.form import schema
+from Products.Zuul.utils import ZuulMessageFactory as _t
+
+if Version.parse('Zenoss ' + ZENOSS_VERSION) >= Version.parse('Zenoss 4'):
+    SingleLineText = schema.TextLine
+    MultiLineText = schema.Text
+else:
+    SingleLineText = schema.Text
+    MultiLineText = schema.TextLine
+
+class %s(IRRDDataSourceInfo):
+%s

@@ -1,0 +1,12 @@
+from zope.interface import implements
+from Products.Zuul.infos import ProxyProperty
+from Products.Zuul.infos.component import ComponentInfo
+from %s.interfaces import *
+
+'''
+args:  zenpack,compInfo,compInterface,infoProperties
+'''
+
+class %s(ComponentInfo):
+    implements( %s )
+%s
