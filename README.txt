@@ -57,7 +57,7 @@ To create a ZenPack with a new custom component, perform the following:
 3) Modify the "Definiton.py" file as needed to suit needed component attributes and data collection methods
 
 4) Reinstall the ZenPack from the command line with:
-	zenpack --link --install=$ZENPACKHOME/ZENPACKS.NAME1.NAME2/ZENPACKS/NAME1/NAME2
+	zenpack --link --install=$ZENPACKHOME/ZENPACKS.NAME1.NAME2
 	zopectl restart ; zenhub restart
 	
 5) Manually copy any plugins/scripts you intend to distribute to:
