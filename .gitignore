@@ -1,6 +1,7 @@
 *~
 *.pyc
 *.pyo
+src
 build
 setuptools*
 *.egg

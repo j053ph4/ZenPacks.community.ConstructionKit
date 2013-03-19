@@ -1,5 +1,5 @@
 from Products.ZenRelations.RelSchema import *
-import os,re,json,pprint
+import os,re,json,pprint,errno
 
 
 ZENPACKNAME="ZenPacks.community.ConstructionKit"
@@ -45,7 +45,19 @@ TYPESCHEMA = {
               'file': {'interface': 'schema.File', 'xtype': 'field', 'quote': False},
               }
 
-    
+def make_sure_path_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+def touch(fname):
+    if os.path.exists(fname):
+        os.utime(fname, None)
+    else:
+        open(fname, 'w').close()
+
 def addProperty(title, group, default=None, ptype='string', switch=None, optional='true', override=False, isReference=False):
     """
         return dictionary describing component properties
@@ -92,7 +104,7 @@ def writeLines(filename,lines,mode="w"):
     """
         write text to file
     """
-    print "building file: %s with %s lines" % (filename,len(lines.split('\n')))
+    #print "building file: %s with %s lines" % (filename,len(lines.split('\n')))
     cache = open(filename,mode)
     for line in lines.split('\n'):
         cache.write("%s\n" % line)
@@ -122,6 +134,16 @@ class Construct():
         self.buildComponent()
         if self.createDS == True:
             self.buildDataSource()
+        # ensure all needed directories exist with a __init__.py file
+        directories = ['datasources','migrate','objects','resources','modeler','libexec']
+        for d in directories:
+            pathname = "%s/%s" % (self.cwd,d)
+            make_sure_path_exists(pathname)
+            if d  not in ['resources','skins','objects']:
+                touch("%s/__init__.py" % pathname)
+                
+        # copy componentMigrate to new dir
+        
         
     def buildComponent(self):
         ''''''
@@ -198,10 +220,13 @@ class Construct():
         override = '\n'
         for k,v in self.props.items():
             if v['override'] == True:
-                if v['isReference'] == True:
+                if v['isReference'] == True: # set the property to a device attribute 
                     override += '''    setattr(component,"%s",target.%s)\n''' % (k,v['default'])
-                else:
-                    override += '''    setattr(component,"%s","%s")\n''' % (k,v['default'])
+                else:  # set the property to the literal value provided
+                    if v['type'] == 'boolean':
+                        override += '''    setattr(component,"%s","%s")\n''' % (k,v['default'])
+                    else:
+                        override += '''    setattr(component,"%s","'%s'")\n''' % (k,v['default'])
         return override
     
     def buildAddMethods(self):
@@ -240,7 +265,10 @@ class Construct():
                     if isReference == True:
                         output += """    %s = ''\n""" % k
                     else:
-                        output += """    %s = %s\n""" % (k,v['default'])
+                        if v['type'] == 'boolean':
+                            output += """    %s = %s\n""" % (k,v['default'])
+                        else:
+                            output += """    %s = '%s'\n""" % (k,v['default'])
                 else:
                     output += """    %s = %s\n""" % (k,v['default'])
             else:

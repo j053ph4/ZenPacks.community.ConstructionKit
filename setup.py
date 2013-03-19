@@ -5,7 +5,7 @@
 NAME = "ZenPacks.community.ConstructionKit"
 VERSION = "1.0.0"
 AUTHOR = "Joseph Anderson"
-LICENSE = ""
+LICENSE = "Apache"
 NAMESPACE_PACKAGES = ['ZenPacks', 'ZenPacks.community']
 PACKAGES = ['ZenPacks', 'ZenPacks.community', 'ZenPacks.community.ConstructionKit']
 INSTALL_REQUIRES = []
