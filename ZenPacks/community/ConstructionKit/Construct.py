@@ -211,7 +211,7 @@ class Construct():
         try:
             self.eventClass = self.datasourceData['properties']['eventKey']['default']
         except:
-            self.eventClass = "'/Unknown'"
+            self.eventClass = '/Unknown'
     
     def buildOverrides(self):
         """
