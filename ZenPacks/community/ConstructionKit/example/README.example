@@ -1,0 +1,23 @@
+To create a ZenPack with a new custom component, perform the following:
+
+1) Begin creating a ZenPack from the GUI in the usual fashion (as documented)
+	a) be sure to set dependency on Zenpacks.community.ConstructionKit
+	
+2) From the command line:
+	a) cd $ZENPACKHOME/ZENPACKS.NAME1.NAME2/ZENPACKS/NAME1/NAME2(replace with correct path to your Zenpack)
+	b) rm -Rf *
+	c) cp $ZENPACKHOME/ZenPacks.community.ConstructionKit/ZenPacks/community/ConstructionKit/example/* ./
+
+3) Modify the "Definiton.py" file as needed to suit needed component attributes and data collection methods
+
+4) Reinstall the ZenPack from the command line with:
+	zenpack --link --install=$ZENPACKHOME/ZENPACKS.NAME1.NAME2/ZENPACKS/NAME1/NAME2
+	zopectl restart ; zenhub restart
+	
+5) Manually copy any plugins/scripts you intend to distribute to:
+	$ZENPACKHOME/ZENPACKS.NAME1.NAME2/ZENPACKS/NAME1/NAME2/libexec
+	
+6) Create any desired component-based RRD templates and add to the ZenPack
+	
+7) Zenpack can now be exported from Zenoss GUI and installed elsewhere (make sure the ConstructionKit dependency is met).
+
