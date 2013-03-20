@@ -28,7 +28,6 @@ Installation
 Install ZenPack on server
 --------------------------------
 
-Download the `Distributed Collectors ZenPack <http://community.zenoss.org/docs/DOC-5861>`_.
 Copy this file to your Zenoss server and run the following commands as the zenoss
 user.
 
