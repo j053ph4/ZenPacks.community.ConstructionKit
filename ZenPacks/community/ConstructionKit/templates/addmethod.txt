@@ -2,7 +2,7 @@
     from Products.ZenUtils.Utils import prepId
     from %s.%s import %s
     import re
-    cid = ''
+    cid = '%s' 
     for k,v in kwargs.iteritems():
         if type(v) != bool:
             cid += str(v)
