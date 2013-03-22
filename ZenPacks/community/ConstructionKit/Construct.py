@@ -45,6 +45,8 @@ TYPESCHEMA = {
               'file': {'interface': 'schema.File', 'xtype': 'field', 'quote': False},
               }
 
+TEXTTYPES = ['string','lines','password']
+
 def make_sure_path_exists(path):
     try:
         os.makedirs(path)
@@ -148,6 +150,7 @@ class Construct():
     def buildComponent(self):
         ''''''
         self.componentClass = self.d.component
+        self.baseid = self.componentClass.lower()
         self.componentSingle = self.d.componentData['singular']
         self.componentPlural = self.d.componentData['plural']
         self.props = self.d.componentData['properties']
@@ -223,7 +226,8 @@ class Construct():
                 if v['isReference'] == True: # set the property to a device attribute 
                     override += '''    setattr(component,"%s",target.%s)\n''' % (k,v['default'])
                 else:  # set the property to the literal value provided
-                    if v['type'] == 'string':
+                    #if v['type'] == 'string':
+                    if v['type'] in TEXTTYPES:
                         override += '''    setattr(component,"%s","'%s'")\n''' % (k,v['default'])
                     else:
                         override += '''    setattr(component,"%s","%s")\n''' % (k,v['default'])
@@ -234,7 +238,7 @@ class Construct():
             basic add component method
         """
         self.createMethodName = "add%s" % self.componentClass
-        self.createMethod = readLines(addMethod) % (self.zenpackname, self.componentClass, self.componentClass,
+        self.createMethod = readLines(addMethod) % (self.zenpackname, self.componentClass, self.componentClass,self.baseid,
                                                     self.componentClass, self.relname, self.buildOverrides())
         # device "manage_addComponent" method
         self.addMethodName = "manage_%s" % self.createMethodName
@@ -265,7 +269,8 @@ class Construct():
                     if isReference == True:
                         output += """    %s = ''\n""" % k
                     else:
-                        if v['type'] == 'string':
+                        if v['type'] in TEXTTYPES:
+                        #if v['type'] == 'string':
                             output += """    %s = '%s'\n""" % (k,v['default'])
                         else:
                             output += """    %s = %s\n""" % (k,v['default'])
