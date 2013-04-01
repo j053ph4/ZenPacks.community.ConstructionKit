@@ -4,30 +4,6 @@
                 provides=".interfaces.%s"
             />
     
-            <!-- Import directRouter Directive -->
-            <include package="Products.ZenUtils.extdirect.zope" file="meta.zcml"/>
-    
-            <browser:directRouter
-                name="%s_router"
-                for="*"
-                class=".routers.%s"
-                namespace="Zenoss.remote"
-                permission="zenoss.View"
-            />
-    
-            <adapter
-                name="%s"
-                provides=".interfaces.%s"
-                for="*"
-                factory=".facades.%s"
-            />
-                
-            <!-- Javascript stuff -->
-            <browser:resourceDirectory
-                    name="%s"
-                    directory="resources"
-            />
-                
             <browser:viewlet
                 name="js-%s"
                 paths="/++resource++%s/%s.js"
@@ -36,13 +12,4 @@
                 class="Products.ZenUI3.browser.javascript.JavaScriptSrcBundleViewlet"
                 permission="zope2.Public"
             />
-            
-            <browser:viewlet
-                  name="component-add-menu-%s"
-                  paths="/++resource++%s/%s-add.js"
-                  weight="9"
-                  for="Products.ZenModel.Device.Device"
-                  manager="Products.ZenUI3.browser.interfaces.IHeadExtraManager"
-                  class="Products.ZenUI3.browser.javascript.JavaScriptSrcBundleViewlet"
-                  permission="zope2.Public"
-            />
+

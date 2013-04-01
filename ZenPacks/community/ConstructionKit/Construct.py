@@ -10,10 +10,16 @@ CWD = os.path.dirname(os.path.realpath(__file__))+'/templates'
 # component template files
 compClass = '%s/%s' % (CWD,"componentClass.txt")
 compConfig = '%s/%s' % (CWD,"componentConfigure.txt")
+compConfigAdd = '%s/%s' % (CWD,"componentConfigureAdd.txt")
 compFacade = '%s/%s' % (CWD,"componentFacade.txt")
+compFacadeMethod = '%s/%s' % (CWD,"componentFacadeMethod.txt")
 compInfo = '%s/%s' % (CWD,"componentInfo.txt")
 compInterface = '%s/%s' % (CWD,"componentInterface.txt")
+compInterfaceClass = '%s/%s' % (CWD,"componentInterfaceClass.txt")
+compInterfaceFacade = '%s/%s' % (CWD,"componentInterfaceFacade.txt")
+compInterfaceFacadeMethod = '%s/%s' % (CWD,"componentInterfaceFacadeMethod.txt")
 compRouter = '%s/%s' % (CWD,"componentRouter.txt")
+compRouterMethod = '%s/%s' % (CWD,"componentRouterMethod.txt")
 # datasource template files
 dsClass = '%s/%s' % (CWD,"datasourceClass.txt")
 dsConfig = '%s/%s' % (CWD,"datasourceConfigure.txt")
@@ -102,12 +108,15 @@ def printFile(name,string):
         print r
     print ""
 
-def writeLines(filename,lines,mode="w"):
+def writeLines(filename,lines,new=True):
     """
         write text to file
     """
     #print "building file: %s with %s lines" % (filename,len(lines.split('\n')))
-    cache = open(filename,mode)
+    if new == True:
+        cache = open(filename,'w')
+    else:
+        cache = open(filename,'a')
     for line in lines.split('\n'):
         cache.write("%s\n" % line)
     cache.close()
@@ -128,6 +137,24 @@ class Construct():
             self.createDS = self.d.createDS
         except:
             self.createDS = True
+        try:
+            self.addManual = self.d.addManual
+        except:
+            self.addManual = True
+        try:
+            self.cycletime = self.d.cycletime
+        except:
+            self.cycletime = 300
+        try:
+            self.timeout = self.d.timeout
+        except:
+            self.timeout = 60
+        try:
+            self.provided = self.d.provided
+        except:
+            self.provided = False
+             
+        self.configZCMLEnded = True
         self.version = self.d.version
         self.cwd = self.d.cwd
         self.zenpackroot = self.d.zenpackroot
@@ -135,17 +162,16 @@ class Construct():
         self.zenpackname = "%s.%s" % (self.zenpackroot, self.zenpackbase)
         self.buildComponent()
         if self.createDS == True:
+            self.datasourceClass = self.componentClass + 'DataSource'
             self.buildDataSource()
         # ensure all needed directories exist with a __init__.py file
-        directories = ['datasources','migrate','objects','resources','modeler','libexec']
+        directories = ['datasources','migrate','objects','resources','modeler','libexec','modeler/plugins']
         for d in directories:
             pathname = "%s/%s" % (self.cwd,d)
             make_sure_path_exists(pathname)
             if d  not in ['resources','skins','objects']:
                 touch("%s/__init__.py" % pathname)
-                
         # copy componentMigrate to new dir
-        
         
     def buildComponent(self):
         ''''''
@@ -169,48 +195,58 @@ class Construct():
         self.iFacadeClass = "I%s" % self.facadeClass
         self.adapterClass = "%sAdapter" % self.zenpackbase
         self.routerClass = "%sRouter" % self.zenpackbase
+        #self.createFiles()
+        # now set up the properties
+        self.classAttributes = self.getClassAttributes(self.props)
+        self.classProperties = self.getClassProperties(self.props)
+        self.infoProperties = self.getInfoProperties(self.props)
+        self.interfaceProperties = self.getInterfaceProperties(self.props)
+        # build the add methods
+        self.buildAddMethods()
+    
+    def createFiles(self,new=True):
+        ''''''
         self.componentfile = "%s/%s.py" % (self.cwd,self.componentClass)
         self.infofile = "%s/info.py" % self.cwd
         self.interfacefile = "%s/interfaces.py" % self.cwd
         self.facadefile = "%s/facades.py" % self.cwd
         self.routerfile = "%s/routers.py" % self.cwd
-        self.migratefile = "%s/migrate/ComponentMigration.py" % self.cwd
-        # now set up the properties
-        self.setComponentProperties()
-        self.buildAddMethods()
-    
-    def setComponentProperties(self):
-        """
-            update provided dictionary with class-related data
-        """
-        self.classAttributes = self.getClassAttributes(self.props)
-        self.classProperties = self.getClassProperties(self.props)
-        self.infoProperties = self.getInfoProperties(self.props)
-        self.interfaceProperties = self.getInterfaceProperties(self.props)
+        #self.migratefile = "%s/migrate/ComponentMigration.py" % self.cwd
+
+        if new == True:
+            touch(self.componentfile)
+            touch(self.infofile)
+            touch(self.interfacefile)
+            touch(self.facadefile)
+            touch(self.routerfile)
+            #touch(self.migratefile)
+        if self.createDS == True:
+            self.datasourcefile = "%s/datasources/%s.py" % (self.cwd,self.datasourceClass)
+            touch(self.datasourcefile)
         
     def buildDataSource(self):
         ''''''
-        self.datasourceClass = self.componentClass + 'DataSource'
         self.datasourceData = {}
         self.datasourceData['properties'] = {}
         self.datasourceData['properties'].update(self.d.componentData['properties'])
-        self.datasourceData['properties']['timeout'] = addProperty('Timeout (s)','Timing',self.d.cycleTime,switch='-t')
-        self.datasourceData['properties']['cycletime'] = addProperty('Cycle Time (s)','Timing',self.d.timeout,'int')
+        self.datasourceData['properties']['timeout'] = addProperty('Timeout (s)','Timing',self.cycletime,switch='-t')
+        self.datasourceData['properties']['cycletime'] = addProperty('Cycle Time (s)','Timing',self.timeout,'int')
         self.datasourceInfo = "%sInfo" % self.datasourceClass
         self.datasourceInterface = "I%s" % self.datasourceInfo
-        self.datasourcefile = "%s/datasources/%s.py" % (self.cwd,self.datasourceClass)
-        self.setDataSourceProperties()
-        
-    def setDataSourceProperties(self):
+        # datasource properties
         self.datasourceInfoProperties = self.getInfoProperties(self.datasourceData['properties'])
         self.datasourceInterfaceProperties = self.getInterfaceProperties(self.datasourceData['properties'])
         self.datasourceClassProperties = self.getClassProperties(self.datasourceData['properties'],ds=True)
         self.datasourceClassAttributes = self.getClassAttributes(self.datasourceData['properties'],ds=True)
-        self.cycletime = self.datasourceData['properties']['cycletime']['default']
-        self.timeout = self.datasourceData['properties']['timeout']['default']
         self.component = "'${here/%s}'" % self.d.componentData['displayed']
-        self.cmdFile = "'%s'" % self.d.cmdFile
-        self.dpoints = str(self.d.datapoints)
+        try:
+            self.cmdFile = "'%s'" % self.d.cmdFile
+        except:
+            self.cmdFile = None
+        try:
+            self.dpoints = str(self.d.datapoints)
+        except:
+            self.dpoints = str([])
         try:
             self.eventClass = self.datasourceData['properties']['eventKey']['default']
         except:
@@ -263,14 +299,12 @@ class Construct():
         output = ''
         for k,v in data.items():
             isReference = v['isReference']
-            
             if ds == False:
                 if  v['default'] is not None:
                     if isReference == True:
                         output += """    %s = ''\n""" % k
                     else:
                         if v['type'] in TEXTTYPES:
-                        #if v['type'] == 'string':
                             output += """    %s = '%s'\n""" % (k,v['default'])
                         else:
                             output += """    %s = %s\n""" % (k,v['default'])
@@ -315,27 +349,54 @@ class Construct():
             output += """    %s = %s(title=_t(u'%s'))\n""" % (k,schemaclass,dtitle)
         return output
     
-    def writeComponentFiles(self):
+    def writeComponentFiles(self, new=True):
         '''
             write Zenpack component files
         '''
         # component class
         lines = readLines(compClass) % (self.componentClass,self.componentClass,self.classAttributes,self.classProperties,self.relname,self.primaryKey,self.nameKey)
-        writeLines(self.componentfile,lines)
+        writeLines(self.componentfile,lines,new)
         # class info
         lines = readLines(compInfo) % (self.zenpackname,self.infoClass,self.interfaceClass,self.infoProperties)
-        writeLines(self.infofile,lines)
+        writeLines(self.infofile, lines, new)
         # class interface
-        lines = readLines(compInterface) % (self.interfaceClass,self.interfaceProperties,self.iFacadeClass,self.iFacadeMethodName)
-        writeLines(self.interfacefile,lines)
+        if new == True:
+            writeLines(self.interfacefile, readLines(compInterface), new)
+        # interface component class
+        lines = readLines(compInterfaceClass) % (self.interfaceClass,self.interfaceProperties)
+        writeLines(self.interfacefile, lines, False)
+
+        # write facade class methods to temp file
+        if new == True:
+            lines = readLines(compInterfaceFacade) % (self.iFacadeClass)
+            writeLines("/tmp/interface-temp", lines, new)
+        
+        lines = readLines(compInterfaceFacadeMethod) % (self.iFacadeMethodName)
+        writeLines("/tmp/interface-temp", lines, False)
+        # then write back to main file when done
+        if self.configZCMLEnded == True:
+            # interface component facade method
+            lines = readLines("/tmp/interface-temp")
+            writeLines(self.interfacefile, lines, False)
+        
         # class facade
-        lines = readLines(compFacade) % (self.facadeClass,self.componentClass,self.facadeClass,self.iFacadeClass,self.facadeMethodName,self.facadeMethod,self.componentSingle)
-        writeLines(self.facadefile,lines)
+        if new == True:
+            #lines = readLines(compFacade) % (self.facadeClass,self.componentClass,self.facadeClass,self.iFacadeClass,self.facadeMethodName,self.facadeMethod,self.componentSingle)
+            lines = readLines(compFacade) % (self.facadeClass,self.componentClass,self.facadeClass,self.iFacadeClass)
+            writeLines(self.facadefile, lines, new)
+        # facade method
+        lines = readLines(compFacadeMethod) % (self.facadeMethodName,self.facadeMethod,self.componentSingle)
+        writeLines(self.facadefile, lines, False)
+        
         # class router
-        lines = readLines(compRouter) % (self.routerClass,self.adapterClass,self.routerMethodName,self.createMethodName)
-        writeLines(self.routerfile,lines)
-    
-    def writeDatasourceFiles(self):
+        if new == True:
+            lines = readLines(compRouter) % (self.routerClass,self.adapterClass)
+            writeLines(self.routerfile,lines, new)
+            
+        lines = readLines(compRouterMethod) % (self.routerMethodName,self.createMethodName)
+        writeLines(self.routerfile, lines, False)
+        
+    def writeDatasourceFiles(self, new=True):
         '''
             write Zenpack datasource files
         '''
@@ -351,21 +412,23 @@ class Construct():
         lines = readLines(dsInfo) % (self.zenpackname,self.zenpackname,self.datasourceClass,
                                      self.componentClass, self.datasourceClass,'onRedirectOptions',
                                      self.datasourceInfo,self.datasourceInterface,self.datasourceInfoProperties)
-        writeLines(self.infofile,lines,"a")
+        writeLines(self.infofile, lines, new=False)
         # interfaces
         lines = readLines(dsInterface) % (self.datasourceInterface,self.datasourceInterfaceProperties)
-        writeLines(self.interfacefile,lines,"a")
+        writeLines(self.interfacefile, lines, new=False)
     
-    def buildZenPackFiles(self):
+    def buildZenPackFiles(self, new=True):
         """
             build all files for this zenpack
         """
-        self.writeComponentFiles()
+        self.createFiles(new)
+        self.writeComponentFiles(new)
         if self.createDS == True:
-            self.writeDatasourceFiles()
-        self.buildConfigureXML()
+            self.writeDatasourceFiles(new)
+        self.buildConfigureXML(new)
         self.buildComponentJS()
-        self.buildAddComponentJS()
+        if self.addManual == True:
+            self.buildAddComponentJS()
     
     def buildJavaScriptFiles(self):
         """
@@ -494,7 +557,7 @@ class Construct():
                          self.componentPlural
                          )
         filename = "%s/resources/%s.js" % (self.cwd,self.componentJSName)
-        writeLines(filename,js,"w")
+        writeLines(filename,js)
     
     def buildAddComponentJS(self):
         """
@@ -509,24 +572,32 @@ class Construct():
                                      self.componentSingle
                                      )
         filename = "%s/resources/%s-add.js" % (self.cwd,self.componentJSName)
-        writeLines(filename,js,"w")
+        writeLines(filename,js)
     
-    def buildConfigureXML(self):
+    def buildConfigureXML(self, new=True):
         """
             basic configure.zcml file
         """
-        text = readLines(configZCMLStart)
+        text = ''
+        # top part of zcml file
+        if new == True:
+            text += readLines(configZCMLStart) % (self.zenpackbase, self.routerClass, self.adapterClass, 
+                                                  self.iFacadeClass, self.facadeClass, self.zenpackbase)
+            writeLines("%s/configure.zcml" % self.cwd, text)
+            
+        # datasource info
         if self.createDS == True:
             text += readLines(dsConfig) % (self.datasourceInfo, self.datasourceClass, self.datasourceClass, 
                                         self.datasourceInterface, self.componentClass, self.componentClass)
-        text += readLines(compConfig) % (self.infoClass, self.componentClass, self.componentClass, 
-                                         self.interfaceClass, self.zenpackbase, self.routerClass, 
-                                         self.adapterClass, self.iFacadeClass, self.facadeClass, 
-                                         self.zenpackbase, self.zenpackbase, self.zenpackbase, 
-                                         self.componentJSName, self.componentJSName, self.zenpackbase, 
-                                         self.componentJSName)
-        text += readLines(configZCMLFinish)
-        writeLines("%s/configure.zcml" % self.cwd, text, "w")
+        # component info
+        text += readLines(compConfig) % (self.infoClass, self.componentClass, self.componentClass, self.interfaceClass, 
+                                         self.componentClass, self.zenpackbase, self.componentJSName)
+        if self.addManual == True:
+            text += readLines(compConfigAdd) % (self.componentJSName, self.zenpackbase, self.componentJSName)
+            
+        if self.configZCMLEnded == True:
+            text += readLines(configZCMLFinish)
+        writeLines("%s/configure.zcml" % self.cwd, text, new)
     
     def addDeviceRelation(self):
         """ Add device relations

@@ -1,7 +1,3 @@
-'''
-args:  compFacade,compClass,facadeName,iFacadeName,facadeMethodName, createMethod, singular
-'''
-
 import os,re
 import logging
 log = logging.getLogger('zen.%s')
@@ -14,8 +10,4 @@ from .interfaces import *
 
 class %s(ZuulFacade):
     implements(%s)
-    
-    def %s(self, ob, **kwargs):
-    	target = ob
-%s
-    	return True, _t("Added %s for device " + target.id)
+ 
