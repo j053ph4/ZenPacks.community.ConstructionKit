@@ -1,4 +1,0 @@
-    def %s(self, ob, **kwargs):
-    	target = ob
-%s
-    	return True, _t("Added %s for device " + target.id)
