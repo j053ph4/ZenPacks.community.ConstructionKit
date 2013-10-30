@@ -84,20 +84,6 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
                 raise res
             return res
     
-#    def getCommand(self, context):
-#        '''
-#            generate the plugin command
-#        '''
-#
-#        cmd = binPath(self.cmdFile)
-#        if self.check_file(cmd) is False:  cmd = self.cmdFile
-#        props = getattr(context,'_properties')
-#        data = self.getData(props)
-#        parts = [cmd] + self.evalArgs(context, data) + self.addArgs(context, data)
-#        cmd = ' '.join(parts)
-#        cmd = RRDDataSource.getCommand(self, context, cmd)
-#        return cmd
-    
     def getComponent(self, context, component=None):
         """Return localized component.
         """
@@ -156,7 +142,7 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
             if id in self.ignoreKeys: continue
             value = str(getattr(context, id))
             # check that value is popluated
-            if value != "None" and len(value) > 0:
+            if value != "None" and len(str(value)) > 0:
                 if xtype == 'string':# -x "XVAL"
                     parts.append('%s \"%s\"' % (switch, str(value)))
                 elif xtype == 'lines': # -x "VAL1" "VAL2" "VAL3"...
@@ -169,7 +155,7 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
                         values = split_by_space
                     parts.append('%s \"%s\"' % (switch, '\" \"'.join(values)))
                 elif xtype == 'boolean': # -x
-                    if value == True: parts.append(switch)
+                    if value == "True": parts.append(switch)
                 else: # all other args
                     parts.append('%s %s' % (switch, value))
         return parts

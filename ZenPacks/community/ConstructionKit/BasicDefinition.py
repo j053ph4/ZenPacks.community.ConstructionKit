@@ -87,7 +87,6 @@ def addDefinitionSelfComponentRelation(definition,
                     },
             'link': {
                     'name': "get%sLink" % toname.capitalize(),
-                    #'text': '''def %s(ob):  return ob.%s().getComponentLink('%s')\n''',
                     'text': '''def %s(ob):\n    try:\n        return ob.getRelatedComponentLink('%s','%s')\n    except:\n        pass\n''',
                     'args': ( toname, linkattrib)
                     },
@@ -158,16 +157,19 @@ def addMethods(definition, title, data={}):
     ''' add get, set, and link methods to a supplemental relation'''
     from ZenPacks.community.ConstructionKit.ClassHelper import stringToMethod
     methods = []
+    names = []
     for v in data.values():
         name = v['name']
-        args = (v['name'],) 
+        args = (name,) 
         args += v['args']
         text = v['text'] % args
-        #print text
+        names.append(name)
         methods.append(stringToMethod(v['name'], text))
     definition.componentMethods += methods
     definition.componentData['properties'][ data['set']['name'].lower() ] = getSetter(data['set']['name'])
     definition.componentData['properties'][ data['link']['name']] = getReferredMethod(title, data['link']['name'])
+    definition.ignoreKeys += names
+    definition.ignoreKeys += [data['set']['name'].lower(), data['link']['name']]
 
 class BasicDefinition(object):
     """
@@ -201,6 +203,7 @@ class BasicDefinition(object):
     datasourceData = {'properties': {
                                      'timeout' : addProperty('Timeout (s)', 'Timing', 60, ptype='int', switch='-t'),
                                      'cycletime' : addProperty('Cycle Time (s)', 'Timing', 300, 'int'),
+                                     #'command': 
                                      }
                       }
     fromClass = "%s.%s.%s" % (zenpackroot, zenpackbase, component)
