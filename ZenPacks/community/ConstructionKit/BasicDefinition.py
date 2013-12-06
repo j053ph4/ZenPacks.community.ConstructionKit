@@ -163,6 +163,7 @@ def addMethods(definition, title, data={}):
         args = (name,) 
         args += v['args']
         text = v['text'] % args
+	#print text
         names.append(name)
         methods.append(stringToMethod(v['name'], text))
     definition.componentMethods += methods

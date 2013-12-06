@@ -1,5 +1,4 @@
 from Products.ZenModel.OSComponent import OSComponent
-#from Products.ZenModel.ZenPackable import ZenPackable
 from AccessControl import ClassSecurityInfo
 from AccessControl import Permissions
 from Products.ZenModel.ZenossSecurity import *
@@ -22,11 +21,7 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
     isUserCreatedFlag = True
     status=0
     
-    #_properties = OSComponent._properties
-    
     _relations = OSComponent._relations #+ (
-        #("opsys", ToOne(ToManyCont, "Products.ZenModel.OperatingSystem", "customcomponent")),
-        #)
     
     factory_type_information = (
         {
@@ -112,7 +107,8 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
         '''find an object in the given catalog (brains) with matching attribute'''
         for b in brains:
             ob = b.getObject()
-            if str(getattr(ob, attribute)) == str(match):  return ob
+            if str(match) in str(getattr(ob, attribute)): return ob
+            #if str(getattr(ob, attribute)) == str(match):  return ob
         return None
     
     def getEventClasses(self):
@@ -188,7 +184,7 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
         ''' remove custom component relations '''
         diffs = [x for x in self._relations if x not in OSComponent._relations and x[0] != 'os']
         for d in diffs:
-            #log.debug("unsetting relation: %s" % d[0])
+            log.debug("unsetting relation: %s" % d[0])
             #print "unsetting relation: %s" % d[0]
             self.unsetCustomRelation(d[0])
 
