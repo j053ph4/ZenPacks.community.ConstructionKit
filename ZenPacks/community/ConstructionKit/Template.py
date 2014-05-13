@@ -10,7 +10,7 @@ import Definition
 
 init = Initializer(Definition)
 for c in init.constructs: exec c.onCollectorInstalled()
-#ZenPack = init.getZenPackClass()
+
 class ZenPack(ZenPackConstruct):
     constructs = init.constructs
     packZProperties = init.props
@@ -47,7 +47,7 @@ class ZenPack(ZenPackConstruct):
         cid = cid[:64]
     id = prepId(cid)
     component = %s(id)
-    relation = target.os.%s
+    relation = target.%s.%s
     relation._setObject(component.id, component)
     component = relation._getOb(component.id)
     for k,v in kwargs.iteritems():
@@ -68,10 +68,8 @@ class ZenPack(ZenPackConstruct):
     facade = self._getFacade()
     ob = self.context
     success, message = facade.%s(ob, **kwargs)
-    if success: 
-        return DirectResponse.succeed(message)
-    else:
-        return DirectResponse.fail(message)\n'''
+    if success:  return DirectResponse.succeed(message)
+    else: return DirectResponse.fail(message)\n'''
     
     ON_COLLECTOR_INSTALLED = '''def onCollectorInstalled%s(ob, event):
     zpFriendly = %s
@@ -168,7 +166,7 @@ class ZenPack(ZenPackConstruct):
             />\n'''
                 
     COMPONENT_VOLCABULARY_METHOD = '''def %s(context):\n    return SimpleVocabulary.fromValues(context.%s())\n\n'''
-    
+        
     VOCABULARYMETHOD = '''from %s.datasources.%s import *\ndef %sRedirectVocabulary(context):\n    return SimpleVocabulary.fromValues(%s.onRedirectOptions)\n\n'''
  
     JS_DISPLAY='''\n(function(){
@@ -181,7 +179,11 @@ class ZenPack(ZenPackConstruct):
             return ob;
         }
     }
-
+    
+    function pass_link(ob){ 
+        return ob; 
+    }
+    
     ZC.%sPanel = Ext.extend(ZC.ComponentGridPanel, {
         constructor: function(config) {
             config = Ext.applyIf(config||{}, {

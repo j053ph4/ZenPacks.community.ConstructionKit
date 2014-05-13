@@ -10,13 +10,13 @@ from ZenPacks.community.ConstructionKit.Template import *
 from ZenPacks.community.ConstructionKit.CustomRelations import *
 
 class Construct(object):
-    ''''''
-    # hold info about all the constructed objects
+    '''hold info about all the constructed packs, definitions, constructs, properties, etc'''
     zenpackroot = None
     zenpackbase = None
     zenpackname = None
     componentClass = None
     datasourceClass = None
+    compname = 'os'
     packs = {}
     indent = 4*' '
     template = Template()
@@ -39,6 +39,7 @@ class Construct(object):
         self.zenpackbase = self.d.zenpackbase
         self.zenpackname = "%s.%s" % (self.zenpackroot, self.zenpackbase)
         self.componentClass = self.d.component
+        self.compname = self.d.compname
         self.singular = self.d.componentData['singular']
         self.plural = self.d.componentData['plural']
         self.manual = self.d.addManual
@@ -46,8 +47,7 @@ class Construct(object):
         
         if self.zenpackname not in self.packs.keys():
             log.debug("adding %s to packs" % self.zenpackname)
-            self.packs[self.zenpackname] = {
-                                            'constructs' : {},
+            self.packs[self.zenpackname] = {'constructs' : {},
                                             'builder' : ZenPackBuilder(self.cwd, self.zenpackname, self.indent),
                                             'properties' : {},
                                             'zenpack': None,
@@ -56,31 +56,34 @@ class Construct(object):
         self.packs[self.zenpackname]['properties'][self.definition] = {'component': self.compdata, 'datasource': self.dsdata }
         self.packs[self.zenpackname]['builder'].addHelper(self.d.component, self.definition)
         self.buildComponent()
-        if self.d.createDS == True:
-            self.buildDataSource()
+        if self.d.createDS == True:  self.buildDataSource()
     
     def buildComponent(self):
         '''build component class objects'''
         #log.debug("%s Building Component: %s %s" % (8*'#', self.d.component,8*'#'))
-        construct = Prototype(self.zenpackroot, self.zenpackbase, self.indent)
+        construct = Prototype(self.zenpackroot, self.zenpackbase, self.compname, self.indent)
         construct.addComponent(self.d.component, self.singular, self.plural, self.manual, self.compdata)
         construct.relmgr =  self.d.relmgr
         construct.relmgr.createFromRelations()
+        # add data for parent classes (if any)
         for p in self.d.parentClasses:  
             construct.classdata['parents'].append(p)
             construct.classdata['_properties'] += p._properties
-        
+        # update more component class attributes
         construct.classdata['class'].update({'nameKey': self.d.componentData['displayed'],
                                              'primaryKey' : self.d.componentData['primaryKey'],
                                              'portal_type' : self.d.component,
                                              'meta_type' : self.d.component,
                                              })
+        # start a new helper to build the class
         construct.getHelper()
         # add any custom methods
         for m in self.d.componentMethods:  setattr(construct.helper.classobject, m.__name__, m)
+        # set any default attributes
         for k,v in self.d.componentAttributes.items():  setattr(construct.helper.classobject, k, v)
         # backwards compatibility
         self.setBackwardsCompatVars(construct)
+        # make sure construct is added to local packs data
         if self.packs[self.zenpackname]['zenpack'] is None:  self.packs[self.zenpackname]['zenpack'] = construct
         self.packs[self.zenpackname]['constructs'][self.definition]['component'] = construct
         self.packs[self.zenpackname]['builder'].helpers[self.d.component]['component'] = construct
@@ -90,10 +93,6 @@ class Construct(object):
         '''build datasource class objects'''
         #log.debug("%s Building DataSource: %s %s" % (8*'#',self.datasourceClass,8*'#'))
         construct = Prototype(self.zenpackroot, self.zenpackbase, self.indent)
-        #for d in self.dsdata:
-            #if d.isMethod == True:  
-        #        print "removing %s from %s" % (d.id, self.datasourceClass)
-        #        self.dsdata.remove(d)
         construct.addDataSource(self.datasourceClass, self.dsdata)
         construct.is_datasource = True
         construct.classdata['class'].update({
@@ -105,9 +104,13 @@ class Construct(object):
                                              'cmdFile' : self.d.cmdFile,
                                              'dpoints' : self.d.datapoints,
                                              })
+        # start a new helper to build the class
         construct.getHelper()
+        # append any overridden methods
         for m in self.d.datasourceMethods:  setattr(construct.helper.classobject, m.__name__, m)
+        # update any properties that should be ignored by getCommand
         for x in self.d.ignoreKeys:  construct.helper.classobject.ignoreKeys.append(x)
+        # update local packs data
         self.packs[self.zenpackname]['constructs'][self.definition]['datasource'] = construct
         self.packs[self.zenpackname]['builder'].helpers[self.d.component]['datasource'] = construct
     
@@ -125,12 +128,12 @@ class Construct(object):
             if p.order is None:
                 p.order = order
                 order += 1
-            else:
-                order = p.order + 1
+            else: order = p.order + 1
             data.append(p)
         return data
     
     def rebuild(self):
+        '''rebuild files for all Zenpacks'''
         #log.debug("rebuild")
         packs = self.packs.keys()
         for p in packs:
@@ -185,7 +188,7 @@ class Construct(object):
                               )
         self.packs[self.zenpackname]['builder'].zenpack = construct
     
-    def setBackwardsCompatVars(self,construct):
+    def setBackwardsCompatVars(self, construct):
         ''' vars provided for backwards compat'''
         #log.debug("setBackwardsCompatVars")
         self.addMethodName = construct.methods['add']['name']
@@ -193,15 +196,11 @@ class Construct(object):
         self.relname = construct.relname
         self.zenpackComponentModule = "%s.%s" % (construct.zenpackname, construct.classname)
         self.baseid = construct.baseid
-        self.deviceToComponent = ((self.relname, ToManyCont(ToOne, self.zenpackComponentModule, "os")),)
+        self.deviceToComponent = ((construct.relname, ToManyCont(ToOne, self.zenpackComponentModule, construct.compname)),)
     
     def onCollectorInstalled(self):
         '''returns error if command file not present on collector'''
-        if self.d.cmdFile is not None:
-            text = self.collector_text % (self.d.component, self.d.component, self.d.cmdFile)
-        else:
-            text = '''def onCollectorInstalled(ob, event):\n    pass'''
-        return text
+        if self.d.cmdFile: return self.collector_text % (self.d.component, self.d.component, self.d.cmdFile)
+        else: return '''def onCollectorInstalled(ob, event):\n    pass'''
     
-    def addDeviceRelation(self):
-        pass
+    def addDeviceRelation(self): pass

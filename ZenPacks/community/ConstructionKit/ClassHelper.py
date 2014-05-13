@@ -23,21 +23,24 @@ def stringToMethod(methodName,methodString):
 
 class ClassHelper(object):
     """
+    Standardize the layout of associate classes
     """
     classname = ''
+    compname = 'os'
     infoname = ''
     interfacename = ''
     indent = 4*' '
     classes = []
     template = Template()
     
-    def __init__(self, classname, base, root):
-        ''''''
+    def __init__(self, classname, compname, base, root):
+        ''' set default vars'''
         self.zenpackbase = base
         self.zenpackroot = root
         self.zenpackname = "%s.%s" % (root, base)
         self.classes = []
         self.classname = classname
+        self.compname = compname
         self.infoname = "%sInfo" % self.classname
         self.interfacename = "I%s" % self.infoname
         self.facadename = "%sFacade" % self.zenpackbase
@@ -45,56 +48,56 @@ class ClassHelper(object):
         self.adaptername = "%sAdapter" % self.zenpackbase
         self.routername = "%sRouter" % self.zenpackbase
     
-    def addClassData(self,name,path,klass):
-        ''''''
-        self.classes.append({
-                'name': name,
-                'path': path,
-                'class' : klass
-                })
+    def addClassData(self, name, path, klass):
+        ''' add class to helper'''
+        self.classes.append({ 'name': name, 'path': path, 'class' : klass })
         setattr(ClassHelper, name, klass)
-        
+    
     def componentClass(self, parents, data):
-        ''''''
+        '''build component class'''
+        # basic class object
         self.classobject = type(self.classname, tuple(parents), data)
+        # add properties from inherited parent classes
         for p in parents:
             try:
-                currents = [x[0] for x in self.classobject._relations] + ['os']
+                currents = [x[0] for x in self.classobject._relations] + [self.compname]
                 diffs = [x for x in p._relations if x[0] not in (currents)]
                 self.classobject._relations += tuple(diffs)
-            except:
-                pass
-        for k,v in data.items():
-            setattr(self.classobject,k,v)
+            except:  pass
+        # set attributes for class
+        for k,v in data.items():  setattr(self.classobject,k,v)
+        # set module path
         self.class_path = "%s.%s" % (self.zenpackname, self.classname)
+        # export finalized class object
         self.addClassData(self.classname, self.class_path, self.classobject)
         
     def datasourceClass(self, data):
-        ''''''
+        '''build datasource class'''
+        # basic class
         self.classobject = type(self.classname, (CustomDataSource,), data)
+        # set module path
         self.class_path = "%s.datasources.%s" % (self.zenpackname, self.classname)
+        # export finalized class object
         self.addClassData(self.classname, self.class_path, self.classobject)
     
     def interfaceClass(self,data, ds=False):
-        ''''''
-        if ds == True:
-            klasstext  = self.template.DATASOURCE_INTERFACE % self.interfacename
-        else:
-            klasstext  = self.template.COMPONENT_INTERFACE % self.interfacename
+        '''build interfaces class'''
+        if ds == True:  klasstext = self.template.DATASOURCE_INTERFACE % self.interfacename
+        else:  klasstext = self.template.COMPONENT_INTERFACE % self.interfacename
         self.interfaceclass = self.stringToPython(self.interfacename, klasstext)
         self.interfaceclass._InterfaceClass__attrs.update(data)
         self.interface_path = "%s.interfaces.%s" % (self.zenpackname, self.interfacename)
         self.addClassData(self.interfacename, self.interface_path, self.interfaceclass)
     
     def ifacadeClass(self,data): 
-        ''''''
+        '''build interfaces facade'''
         klasstext = self.template.FACADE_CLASS % (self.ifacadename,self.indent)
         self.ifacadeclass = self.stringToPython(self.ifacadename, klasstext)
         self.ifacade_path = "%s.interfaces.%s" % (self.zenpackname, self.ifacadename)
         self.addClassData(self.ifacadename, self.ifacade_path, self.ifacadeclass)
 
     def facadeClass(self, data):
-        ''''''
+        '''build facades class'''
         args = {}
         args[data['name']] = self.stringToPython(data['name'], data['text'])
         self.facadeclass = type(self.facadename,(ZuulFacade,), args)
@@ -103,17 +106,15 @@ class ClassHelper(object):
         self.addClassData(self.facadename, self.facade_path, self.facadeclass)
 
     def infoClass(self, data, ds=False):
-        ''''''
-        if ds == True:
-            self.infoclass = type(self.infoname,(RRDDataSourceInfo,),data)
-        else:
-            self.infoclass = type(self.infoname,(ComponentInfo,),data)
+        '''build info class'''
+        if ds == True:  self.infoclass = type(self.infoname,(RRDDataSourceInfo,),data)
+        else:  self.infoclass = type(self.infoname,(ComponentInfo,),data)
         classImplements(self.infoclass,self.interfaceclass)
         self.info_path = "%s.info.%s" % (self.zenpackname, self.infoname)
         self.addClassData(self.infoname, self.info_path, self.infoclass)
     
     def routerClass(self,data):
-        ''''''
+        '''build router class'''
         getmethod = self.template.ROUTER_CLASS % (self.indent, self.indent, self.adaptername)
         args = {}
         args['_getFacade'] = self.stringToPython('_getFacade', getmethod)
@@ -141,13 +142,12 @@ class ClassHelper(object):
     
     def stringToPython(self, name, text):
         '''return a python object given string representing the object'''
-        #self.logMethod(name, text)
+        self.logMethod(name, text)
         data = {}
         exec text in data
         return data[name]
     
     def logMethod(self, name, text):
-        ''''''
+        '''log given text'''
         log.debug("adding method: %s" % name)
-        for line in text.split('\n'):
-            log.debug(line)
+        for line in text.split('\n'):  log.debug(line)

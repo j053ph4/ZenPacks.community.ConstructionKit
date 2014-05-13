@@ -5,15 +5,11 @@ from ZenPacks.community.ConstructionKit.CustomRelations import *
 def fixDict(old, new):
     for a,b in new.items():
         if type(b) == dict:
-            try:
-                old.update(fixDict(old[a],new[a]))
-            except:
-                old[a] = b
+            try:  old.update(fixDict(old[a],new[a]))
+            except:  old[a] = b
         else:
-            try:
-                test = old[a]
-            except:
-                old[a] = b
+            try:  test = old[a]
+            except:  old[a] = b
     return old
 
 def update(ob):
@@ -26,19 +22,15 @@ def update(ob):
     newdata = ob.__dict__.copy()
     updateddata =  fixDict(newdata, basedata)
     object = ob()
-    for k,v in updateddata.items():
-        setattr(object, k , v)
+    for k,v in updateddata.items():  setattr(object, k , v)
     object.component = ob.component
     object.datasourceData['properties'].update(object.componentData['properties'].copy())
     object.fromClass = "%s.%s.%s" % (object.zenpackroot, object.zenpackbase, object.component)
     relname = "%s%ss" % (ob.component.lower()[:1], ob.component[1:])
-    object.relmgr.add(relname, ToManyCont, object.fromClass, 
-                      'os', ToOne, 'Products.ZenModel.OperatingSystem')
-    #print "%s: rels: %s" % (object.component, len(object.relmgr.relations))
+    if object.compname == "hw": object.relmgr.add(relname, ToManyCont, object.fromClass, 'hw', ToOne, 'Products.ZenModel.DeviceHW')
+    else: object.relmgr.add(relname, ToManyCont, object.fromClass, 'os', ToOne, 'Products.ZenModel.OperatingSystem')
     return object
 
-    
-    
 def addDefinitionDeviceRelation(definition,
                               fromname, fromtype, fromclass, fromattribute, 
                               toname, totype, toclass, toattribute,
@@ -124,14 +116,12 @@ def addDefinitionDeviceComponentRelation(definition, devkey, devvalue,
     if not definition.relmgr:  definition.relmgr = CustomRelations()
     definition.relmgr.add(fromname, fromtype, fromclass, toname, totype, toclass)
 
-    
 def addDefinitionAnyComponentRelation(definition,
                               fromname, fromtype, fromclass, fromattribute, 
                               toname, totype, toclass, toattribute, 
                               title=None, linkattrib='id'):
     ''' link from component to another component on another device '''
     if title == None: title = toname.capitalize()
-    #if linkattrib == None: linkattrib = toattribute
     classname = toclass.split('.')[-1]
     data = {
             'get': {
@@ -163,7 +153,6 @@ def addMethods(definition, title, data={}):
         args = (name,) 
         args += v['args']
         text = v['text'] % args
-	#print text
         names.append(name)
         methods.append(stringToMethod(v['name'], text))
     definition.componentMethods += methods
@@ -184,9 +173,9 @@ class BasicDefinition(object):
     componentAttributes = {} # list of custom attributes for CustomComponent class 
     parentClasses = [] # any parent classes besides CustomComponent
     relmgr = None
-    #relmgr = CustomRelations() # relations for CustomComponent    
     addManual = False # whether CustomComponent can be added from GUI
     component = '' # name of CustomComponent
+    compname = 'os'
     # CustomComponent properties
     componentData = {
                   'singular': '',
@@ -204,12 +193,12 @@ class BasicDefinition(object):
     datasourceData = {'properties': {
                                      'timeout' : addProperty('Timeout (s)', 'Timing', 60, ptype='int', switch='-t'),
                                      'cycletime' : addProperty('Cycle Time (s)', 'Timing', 300, 'int'),
-                                     #'command': 
                                      }
                       }
     fromClass = "%s.%s.%s" % (zenpackroot, zenpackbase, component)
     
     def reset(self):
+        '''reset all properties back to their defaults'''
         self.relmgr = CustomRelations()
         self.datasourceData = {'properties': {
                                      'timeout' : addProperty('Timeout (s)', 'Timing', 60, ptype='int', switch='-t'),
@@ -233,5 +222,6 @@ class BasicDefinition(object):
         self.componentAttributes = {} 
         self.parentClasses = []
         self.addManual = False
+        self.compname = 'os'
         
 

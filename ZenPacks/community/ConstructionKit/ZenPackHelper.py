@@ -8,8 +8,16 @@ from ZenPacks.community.ConstructionKit.Template import *
 from transaction import commit
 import cPickle as pickle
 
+
+def removeInstanceRelations(app, classname, relname):
+    '''remove all instances of a relation on a class'''
+    brains = app.getDmd().global_catalog(meta_type=classname)
+    for b in brains:
+        ob = b.getObject()
+        ob._delObject(relname)
+
 def countConstructs(app):
-    ''' count the number of each type of custom components'''
+    '''return  the number of each type of custom components'''
     import importlib
     packs = findDefinitionPacks(app)
     cat = app.getDmd().global_catalog
@@ -18,14 +26,12 @@ def countConstructs(app):
         modname = "%s.Definition" % p.moduleName()
         module = importlib.import_module(modname)
         defs = loadDefinitions(module)
-        for d in defs:  
-            print "%s: %s" % (d.component,len(cat(meta_type=d.component)))
-
+        for d in defs:  print "%s: %s" % (d.component,len(cat(meta_type=d.component)))
 
 def exportDevelopmentPacks(app):
     '''export all zenpacks currently in development mode'''
     for p in app.ZenPackManager.packs():
-        if p.isDevelopment() == True:  p.manage_exportPack()
+        if p.isDevelopment() is True:  p.manage_exportPack()
             
 def exportDefinitionPacks(app):
     '''export Definition-related zenpacks'''
@@ -48,6 +54,7 @@ def findDefinitionPacks(app):
     ''' find zenpacks with definition files '''
     packs = []
     for p in app.ZenPackManager.packs():
+        # skip the ConstructionKit itself
         if p.id == 'ZenPacks.community.ConstructionKit': continue
         for f in p.getFilenames():
             if 'Definition' in f:  packs.append(p)
@@ -57,6 +64,7 @@ def findDefinitionFiles(app):
     ''' get list of definition files '''
     definitions = []
     for p in app.ZenPackManager.packs():
+        # skip the ConstructionKit itself
         if p.id == 'ZenPacks.community.ConstructionKit': continue
         file = findDefinition(p)
         if file is not None:  definitions.append(file)
@@ -69,14 +77,13 @@ def loadDefinitions(module):
     members = inspect.getmembers(module, inspect.isclass)
     for m,n in members:
         try:
-            if n.__module__ == module.__name__:
-                defs.append(n)
-        except:
-            pass
+            if n.__module__ == module.__name__:  defs.append(n)
+        except: 
+            log.warn("couldn't append %s to defs" % n)
     return defs
 
 def migrateDefinitions(app):
-    ''' rewrite old definition files '''
+    ''' rewrite old definition files (pre-2.0)'''
     import imp,re, pprint, importlib
     template = Template()
     packs = findDefinitionPacks(app)
@@ -92,22 +99,17 @@ def migrateDefinitions(app):
                 for k,v in d.__dict__.items():
                     if '__' in k: continue
                     if k in ignoreKeys:  continue
-                    if k == 'parentClass':  
-                        data[k] = [v]
-                    else:
-                        data[k] = v
+                    if k == 'parentClass': data[k] = [v]
+                    else: data[k] = v
                 printedData = pprint.pformat(data).replace('\n','\n     ')
                 output = template.DEFINITION_SUBCLASS % (printedData, dname, dname)
                 file = "%s.Definition2.py" % p.path()
                 newfile = open(file,'w')
                 newfile.write(output)
-        except:
-            pass
-    
+        except:  log.warn("couldn't migrate defitions file for %s" % p)
+
 def getConstructs(definitions):
-    '''
-        create all constructs for a set of definitions
-    '''
+    ''' create all constructs for a set of definitions '''
     from ZenPacks.community.ConstructionKit.Construct import Construct
     constructs = []
     for d in definitions:
@@ -139,21 +141,23 @@ def removeRelations(definitions):
         packname = "%s.%s" % (d.zenpackroot, d.zenpackbase)
         construct = c.packs[packname]['constructs'][d.__name__]['component']
         constructs.append(construct)
-    for c in constructs:
-        c.relmgr.removeFromRelations()
-    for c in constructs:
-        c.relmgr.removeToRelations()
-
+    for c in constructs: c.relmgr.removeFromRelations()
+    for c in constructs: c.relmgr.removeToRelations()
 
 def removeRelObjects(app, classname, relname):
+    '''delete all class-based objects directly from catalog'''
     log.info("removing %s from %s objects" % (relname, classname))
     brains = app.getDmd().global_catalog(meta_type=classname)
     for b in brains:
         ob = b.getObject()
-        ob._delObject(relname)
+        try: ob._delObject(relname)
+        except: 
+            try: updateRelation(ob)
+            except: log.warn("problem with %s" % ob.id)
     commit()
 
 def removeRels(app, zenpack):
+    '''remove relations from zenpack-based objects'''
     from ZenPacks.community.ConstructionKit.Construct import Construct
     c = Construct()
     constructs = c.packs[zenpack]['constructs']
@@ -169,22 +173,15 @@ def getZProperties(definitions):
     props = []
     for d in definitions:
         for p in d.packZProperties:
-            if p not in props:  
-                props.append(p)
+            if p not in props: props.append(p)
     return props
 
 def updateRelations(app, component=False):
     ''' update device relations '''
     dmd = app.getDmd()
     log.info("updating relations")
-    log.info("  Devices")
-    for dev in dmd.Devices.getSubDevices():
-        updateRelation(dev)
-        updateRelation(dev.os)
-        if component == True:
-            for c in dev.getDeviceComponents():
-                updateRelation(c)
-        commit()
+    log.info('  Services')
+    for b in dmd.Services.serviceSearch(): updateRelation(b.getObject())
     log.info("  Groups")
     for ob in dmd.Groups.getSubOrganizers():  updateRelation(ob)
     log.info("  Systems")
@@ -199,46 +196,66 @@ def updateRelations(app, component=False):
     for net in dmd.IPv6Networks.getSubNetworks():
         updateRelation(net)
         for ob in net.ipaddresses(): updateRelation(ob)
-    log.info('  Services')
-    brains = dmd.Services.serviceSearch()
-    for b in brains: updateRelation(b.getObject())
     log.info('  Processes')
     for p in dmd.Processes.getSubOSProcessClassesGen():  updateRelation(p)
     commit()
+    log.info("  Devices")
+    for dev in dmd.Devices.getSubDevices():
+        updateRelation(dev)
+        updateRelation(dev.os)
+        updateRelation(dev.hw)
+        if component == True:
+            for c in dev.getDeviceComponents():
+                updateRelation(c)
+        commit()
         
 def updateRelation(ob):
-    try:
-        ob.buildRelations()
-    except:
-        ob.checkRelations(repair=True)
-      
+    '''try to make relations current'''
+    # first try straight build
+    try:  ob.buildRelations()
+    except: 
+        # next try check/repair
+        try: ob.checkRelations(repair=True)
+        except:
+            try:
+                # more drastic fix
+                for name, schema in ob._relations:
+                    try: ob._setObject(name, schema.createRelation(name))
+                    except:  pass
+            except:
+                try:
+                    # even more drastic, delete and recreate all relations
+                    for name, schema in ob._relations:
+                        try: 
+                            delattr(ob,name)
+                            ob._setObject(name, schema.createRelation(name))
+                        except:  pass
+                except:
+                    log.warn("error updating relations for %s" % ob.id)
+
 def getDefinitionComponents(app, classname):
     '''return all component instances of a given class'''
+    log.info("getting all %s components" % classname)
     components = []
     brains = app.dmd.global_catalog(meta_type=classname)
-    for b in brains:
-        components.append(b.getObject())
+    for b in brains: components.append(b.getObject())
     log.info("found %s %s components" % (len(components), classname))
     return components
 
 def removeAllComponents(app, definitions):
     ''' remove all construct-related components '''
-    for d in definitions:
-        removeDefinitionComponents(app, d)
+    for d in definitions: removeDefinitionComponents(app, d)
 
 def removeDefinitionComponents(app, definition):
+    '''remove all definition-related components'''
     components = getDefinitionComponents(app, definition.component)
     log.info("removing %s %s components" % (len(components), definition.component))
     for c in components:
-        try:
-            c.manage_deleteComponent()
+        try: c.manage_deleteComponent()
         except:
-            try:
-                c.getPrimaryParent()._delObject(c.id)
-            except:
-                log.warn("ERROR REMOVING %s: %s on %s" % (name,c.id,  definition.component))
-    try:
-        commit()
+            try: c.getPrimaryParent()._delObject(c.id)
+            except: log.warn("ERROR REMOVING %s: %s on %s" % (name,c.id,  definition.component))
+    try: commit()
     except:
         log.warn("conflict detected, reattempting for %s" %  definition.component)
         sync()
@@ -251,10 +268,13 @@ def saveDefinitionComponents(app, classname):
     data = {}
     for c in components:
         try:
-            data[c.device().id] = {classname: {c.id: c.propertyItems()}}
+            props = []
+            for k,v in c.propertyItems():
+                if hasattr(v, '__call__'): continue
+                props.append((k,v))
+            data[c.device().id] = {classname: {c.id: props}}
             log.info("saving %s from %s" % (c.id, c.device().id))
-        except:
-            log.warn("had trouble with %s from %s" % (c.id, c.device().id))
+        except: log.warn("had trouble saving data for %s from %s" % (c.id, c.device().id))
     import cPickle as pickle
     with open(dataFile, 'wb') as fp: pickle.dump(data, fp)
 
@@ -272,21 +292,21 @@ def loadDefinitionComponents(app, classname, addmethod):
                 item = compdict[classname][i]
                 props = convertToDict(item)
                 method = getattr(device, addmethod)
-                c = method(**props)
-                log.info("added %s to %s" % (c.id,device.id))
+                try:
+                    c = method(**props)
+                    log.info("added %s to %s" % (c.id,device.id))
+                except:
+                    log.warn("problem adding %s to %s" % (c.id,device.id))
             commit()
-    except:
-        pass
+    except: pass
         
 def convertToDict(props):
     ''' convert list of properties to dict'''
     output = {}
     for p in props:
         k,v = p
-        try:
-            output[k] = v
-        except:
-            pass
+        try: output[k] = v
+        except: pass
     return output
 
 

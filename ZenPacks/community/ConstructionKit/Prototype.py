@@ -12,7 +12,7 @@ from ZenPacks.community.ConstructionKit.CustomRelations import *
 from Products.Zuul.utils import ZuulMessageFactory as _t
 from zope.schema.vocabulary import SimpleVocabulary
 
-class Prototype():
+class Prototype(object):
     '''
         generates and holds all class info prior to class building
     '''
@@ -24,40 +24,32 @@ class Prototype():
     router_method = template.ROUTERMETHOD
     override = ''
     
-    def __init__(self, root, base, indent=4*' '):
+    def __init__(self, root, base, compname, indent=4*' '):
+        ''''''
         self.zenpackroot = root
         self.zenpackbase = base
         self.indent = indent
+        self.compname = compname
         self.zenpackname = "%s.%s" % (root, base)
-        self.relmgr = None#  CustomRelations()
-        self.classdata = {
-                     'parents' : [CustomComponent],
-                     'class': {},
-                     'info': {},
-                     'interface': {},
-                     'facade': {},
-                     'ifacade': {},
-                     'router': {},
-                     'adapter': {},
-                     '_properties': [],
-                     'infotext': {},
-                     'configure': [],
-
-                    }
+        self.relmgr = None
+        self.classdata = {'parents' : [CustomComponent], 'class': {},
+                          'info': {}, 'interface': {}, 'facade': {},
+                          'ifacade': {}, 'router': {}, 'adapter': {},
+                          '_properties': [], 'infotext': {}, 'configure': [],
+                          }
         
+        if self.compname == 'hw':  self.classdata['parents'] = [CustomHWComponent]
         self.methods = {
-                   'create': {'name': None, 'text':None},
-                   'add': {'name': None, 'text':None},
-                   'facade': {'name': None, 'text':None},
-                   'ifacade': {'name': None, 'text':None},
-                   'router': {'name': None, 'text':None},
-                   'volcab': {'name': None, 'text':None},
+                   'create': {'name': None, 'text': None},
+                   'add': {'name': None, 'text': None},
+                   'facade': {'name': None, 'text': None},
+                   'ifacade': {'name': None, 'text': None},
+                   'router': {'name': None, 'text': None},
+                   'volcab': {'name': None, 'text': None},
                    }
-        
+    
     def addComponent(self, name, singular, plural, manual=False, props=[]):
-        '''
-            collect component info
-        '''
+        ''' create a new component class '''
         self.is_datasource = False
         self.classname = name
         self.singular = singular
@@ -65,35 +57,29 @@ class Prototype():
         self.manual = manual
         self.baseid = self.classname.lower()
         self.jsname = self.baseid
-        
         self.properties = props
         self.override = ''
         # component relation
         self.relname = "%s%ss" % (self.baseid[:1], self.classname[1:])
-        self.helper = ClassHelper(self.classname, self.zenpackbase, self.zenpackroot)
+        self.helper = ClassHelper(self.classname, self.compname, self.zenpackbase, self.zenpackroot)
         self.getClassData()
         self.buildAddMethods(self.indent)
     
     def addDataSource(self, name, props=[]):
-        '''
-            collect datasource info
-            
-        '''
+        ''' create a new datasource class '''
         self.is_datasource = True
         self.classname = name
         self.properties = props
-        self.helper = ClassHelper(self.classname, self.zenpackbase, self.zenpackroot)
+        self.helper = ClassHelper(self.classname, self.compname, self.zenpackbase, self.zenpackroot)
         self.getClassData()
         
     def buildAddMethods(self, indent):
-        '''
-            build the various add_component methods
-        '''
+        ''' build the various add_component methods for GUI management'''
         basic_name = "add%s" % self.classname
         basic_text = self.add_method % (self.zenpackname, self.classname, 
                                         self.classname,self.baseid,
-                                        self.classname, self.relname, 
-                                        self.override)
+                                        self.classname, self.compname,
+                                        self.relname, self.override)
         # create method
         self.methods['create'] = {'name' : basic_name, 'text' : basic_text }
         # device "manage_addComponent" method
@@ -115,20 +101,24 @@ class Prototype():
         self.classdata['router'] = self.methods['router']
     
     def getClassData(self):
-        '''
-            set class info attributes
-        '''
+        ''' set class info attributes '''
         for p in self.properties:
-            if p.isMethod == True and p.ptype == 'selection' and self.is_datasource == False:
+            # skip if this is a datasource property/method
+            if self.is_datasource is True and p.isMethod is True : continue
+            # for properties that are actually methods with a drop-down 
+            if p.isMethod is True and p.ptype == 'selection':
                 vocref = '%s%s' % (self.classname, p.methodName)
                 vocname = "%s%sVocabulary" % (self.classname,p.methodName)
                 data = p.get_chooser(vocname, vocref, self.template.COMPONENT_VOLCABULARY_METHOD)
                 for k in data.keys(): self.classdata[k].update(data[k])
                 self.classdata['configure'] = self.template.CONFIGURE_COMPONENT_VOLCABULARY % (vocname, vocref)
-            elif self.is_datasource == True and p.isMethod == True : continue
-                #if p.id is not 'eventClass': continue
+            # refer to pass-through for password
+            elif p.ptype == 'password':
+                data = p.get_password()
+                for k in data.keys(): self.classdata[k].update(data[k])
+            # for all other properties that should be visible in component grid
             else:
-                if p.visible == True:
+                if p.visible is True:
                     self.classdata['info'][p.id] =  p.get_info()
                     self.classdata['interface'][p.id] = p.get_interface()
             self.classdata['class'][p.id] = p.get_classattribute(self.is_datasource)
@@ -136,11 +126,9 @@ class Prototype():
             if p.get_override() is not None:  self.override +=  "%s%s" % (self.indent,p.get_override())
     
     def getHelper(self):
-        '''
-            build component and datasource classes
-        '''
+        ''' build component and datasource classes '''
         log.debug( "building %s" % self.helper.classname)
-        if self.is_datasource == False:
+        if self.is_datasource is False:
             #log.debug( self.classdata['class'])
             self.helper.componentClass(self.classdata['parents'], self.classdata['class'])
             self.helper.classobject._relations += tuple(self.relmgr.fromrelations)
@@ -175,7 +163,7 @@ class Prototype():
                     )
                   },
                 )
-
+            # short-circuited this so that eventClass can be selectable
             #self.helper.classobject.isUserCreatedFlag = self.manual
             self.helper.classobject.isUserCreatedFlag = True
             self.helper.interfaceClass(self.classdata['interface'])            
