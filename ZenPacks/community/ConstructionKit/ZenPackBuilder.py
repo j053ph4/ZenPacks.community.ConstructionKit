@@ -49,6 +49,7 @@ class ZenPackBuilder(object):
         self.indent = indent
         self.helpers = {}
         self.files = []
+        
     
     def addHelper(self, name, definition):
         '''add definition to internal list'''
@@ -164,12 +165,18 @@ class ZenPackBuilder(object):
     
     def build_skel(self):
         ''' build local directory structure '''
+        #self.zenpackdirectories.append('modeler/plugins/%s' % self.zenpackname)
         for d in self.zenpackdirectories:
             pathname = "%s/%s" % (self.zenpackdir,d)
             log.debug( "checking path: %s" % pathname)
             self.check_path(pathname)
+            #print 'modeler/plugins/%s' % self.zenpackname
             if d not in ['resources','objects']: self.check_file("%s/__init__.py" % pathname)
-                
+        # dir for modeler plugins
+        pathname = '%s/modeler/plugins/%s' % (self.zenpackdir,self.zenpackname.split('.')[-1])
+        self.check_path(pathname)
+        self.check_file("%s/__init__.py" % pathname)
+        
     def clear_files(self):
         ''' clean local directory structure'''
         if 'ConstructionKit' in self.zenpackdir:  return

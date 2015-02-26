@@ -137,7 +137,7 @@ class CustomProperty(object):
             else: return None
         # if the order is specified, use it.
         # note that this doesn't do what I thought it did (determine layout order in component data drop-down), so
-        # not sure what this deos exactly
+        # not sure what this does exactly
         if self.order is not None:
             return self.interface_type()(title=_t(u'%s' % self.title), group=_t(u'%s' % self.group), order=self.order)
         else:
@@ -262,3 +262,4 @@ class CustomProperty(object):
                     "renderer": "pass_link"
                     }
         return None
+

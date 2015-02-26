@@ -134,15 +134,17 @@ class ClassHelper(object):
     
     def addClassTextMethod(self, object, methodname, methodtext):
         '''add new method to existing class'''
+        #print "adding text method %s: %s" % (object.__name__, methodname)
         setattr(object, methodname, self.stringToPython(methodname, methodtext))
     
     def addClassMethod(self, object, methodname, methodobject):
         '''add new method to existing class'''
+        #print "adding class method %s: %s" % (object.__name__, methodname)
         setattr(object, methodname, new.instancemethod(methodobject, None, object))
     
     def stringToPython(self, name, text):
         '''return a python object given string representing the object'''
-        self.logMethod(name, text)
+        #self.logMethod(name, text)
         data = {}
         exec text in data
         return data[name]
@@ -151,3 +153,4 @@ class ClassHelper(object):
         '''log given text'''
         log.debug("adding method: %s" % name)
         for line in text.split('\n'):  log.debug(line)
+

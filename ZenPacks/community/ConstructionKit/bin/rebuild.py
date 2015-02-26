@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/opt/zenoss/bin/python
 
 import Globals
 from Products.ZenUtils.Utils import unused

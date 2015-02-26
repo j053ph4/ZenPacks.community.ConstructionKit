@@ -94,6 +94,10 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
         if value and prop_type == 'password':  return context.getPassword(prop_id)
         return value
     
+    def getPassword(self, prop_id):
+        ''''''
+        return '${here/%s}' % prop_id
+    
     def getCommand(self, context, cmd=None):
         ''' generate the plugin command '''
         if self.cmdFile is not None: # this uses an external script
@@ -127,14 +131,20 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
         ''' evaluate and return command line args '''
         parts = []
         arg = '''%s \"%s\"'''
-        for prop_id, v in data.items():
-            prop_type = v['type']
+        for prop_id, value in data.items():
+            
+            prop_type = value['type']
             flag = None
             # we only want properties that affect the command line arguments
-            try: switch = v['switch']
-            except: continue
+            #try: switch = value['switch']
+            #except: continue
+            if 'switch' not in value.keys():  continue
+            switch = value['switch']
+            if not switch: continue
             # check that property is relevant to the arguments
             if prop_id in self.ignoreKeys:  continue
+            #print prop_id, value
+            switch = value['switch']
             prop_value = self.getPropertyValue(context, prop_type, prop_id)
             if prop_value and len(str(prop_value)) > 0:
                 # mostly we'll want quotes around the argument value

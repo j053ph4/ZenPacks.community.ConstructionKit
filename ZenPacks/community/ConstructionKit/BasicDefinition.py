@@ -1,6 +1,9 @@
 from Products.ZenModel.migrate.Migrate import Version
 from ZenPacks.community.ConstructionKit.CustomProperty import *
 from ZenPacks.community.ConstructionKit.CustomRelations import *
+#from ZenPacks.community.ConstructionKit.CustomComponent import getFixedPasswords,setFixedPasswords
+import logging
+log = logging.getLogger('zen.zenhub')
 
 def fixDict(old, new):
     for a,b in new.items():
@@ -55,14 +58,14 @@ def addDefinitionDeviceRelation(definition,
                     'args': (toname, linkattrib)
                     },
             }
-    addMethods(definition, title, data)
-    if not definition.relmgr:  definition.relmgr = CustomRelations()
-    definition.relmgr.add(fromname, fromtype, fromclass, toname, totype, toclass)
+    addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass)
+
 
 def addDefinitionSelfComponentRelation(definition,
                               fromname, fromtype, fromclass, fromattribute, 
                               toname, totype, toclass, toattribute, title=None, linkattrib=None):
     ''' link from component to another component on the same device '''
+    #log.debug("addDefinitionSelfComponentRelation FROM: %s-%s TO: %s-%s" % (fromname,fromclass,toname,toclass))
     if title == None: title = toname.capitalize()
     if linkattrib == None: linkattrib = toattribute
     classname = toclass.split('.')[-1]
@@ -83,9 +86,8 @@ def addDefinitionSelfComponentRelation(definition,
                     'args': ( toname, linkattrib)
                     },
             }
-    addMethods(definition, title, data)
-    if not definition.relmgr:  definition.relmgr = CustomRelations()
-    definition.relmgr.add(fromname, fromtype, fromclass, toname, totype, toclass)
+    addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass)
+
 
 def addDefinitionDeviceComponentRelation(definition, devkey, devvalue,
                               fromname, fromtype, fromclass, fromattribute, 
@@ -112,9 +114,7 @@ def addDefinitionDeviceComponentRelation(definition, devkey, devvalue,
                     'args': (toname, linkattrib)
                     },
             }
-    addMethods(definition, title, data)
-    if not definition.relmgr:  definition.relmgr = CustomRelations()
-    definition.relmgr.add(fromname, fromtype, fromclass, toname, totype, toclass)
+    addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass)
 
 def addDefinitionAnyComponentRelation(definition,
                               fromname, fromtype, fromclass, fromattribute, 
@@ -140,8 +140,14 @@ def addDefinitionAnyComponentRelation(definition,
                     'args': ( toname, toattribute)
                     },
             }
-    if not definition.relmgr:  definition.relmgr = CustomRelations()
+    addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass)
+
+def addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass):
+    '''add methods and relations to component definition'''
+    addMethods(definition, title, data)
+    if definition.relmgr is None:  definition.relmgr = CustomRelations()
     definition.relmgr.add(fromname, fromtype, fromclass, toname, totype, toclass)
+    definition.relmgr.info()
 
 def addMethods(definition, title, data={}):
     ''' add get, set, and link methods to a supplemental relation'''
@@ -161,6 +167,44 @@ def addMethods(definition, title, data={}):
     definition.ignoreKeys += names
     definition.ignoreKeys += [data['set']['name'].lower(), data['link']['name']]
 
+
+def getBasicDefinitionData(version, root, base, component, singular, plural): 
+    '''basic Definition dictionary'''
+    return {
+        'version' : version,
+        'zenpackroot' : root,
+        'zenpackbase': base,
+        'packZProperties' : [],
+        'componentMethods' : [],
+        'componentAttributes' : {},
+        'parentClasses': [],
+        'relmgr' : CustomRelations(),
+        'addManual': False,
+        'component' : component,
+        'compname' : 'os',
+        'componentData' : {
+                            'singular' : singular,
+                            'plural': plural,
+                            'displayed' : 'id', # component field in Event Console
+                            'primaryKey' : 'id',
+                            'properties' : {'eventClass' : getEventClass('/Unknown'),},
+                           },
+        'createDS' : False,
+        'cmdFile' : None,
+        'ignoreKeys' : [],
+        'datapoints' : [],
+        'datasourceMethods' : [],
+        'datasourceData' : {'properties': {
+                                'timeout' : addProperty('Timeout (s)', 'Timing', 60, ptype='int', switch='-t'),
+                                'cycletime' : addProperty('Cycle Time (s)', 'Timing', 300, 'int'),
+                                }
+                            },
+        
+        'fromClass' : "%s.%s.%s" % (root, base, component), 
+        'saveOld': False,
+        'loadOld': False,
+        }
+
 class BasicDefinition(object):
     """
         Basic description of CustomComponent and CustomDatasource
@@ -169,10 +213,10 @@ class BasicDefinition(object):
     zenpackroot = 'ZenPacks.community' # ZenPack Root
     zenpackbase = None # ZenaPack Name
     packZProperties = [] # zproperties
-    componentMethods = [] # list of custom methods to add to CustomComponent class
+    componentMethods = [] # [setFixedPasswords, getFixedPasswords] # list of custom methods to add to CustomComponent class
     componentAttributes = {} # list of custom attributes for CustomComponent class 
     parentClasses = [] # any parent classes besides CustomComponent
-    relmgr = None
+    relmgr = None #CustomRelations()
     addManual = False # whether CustomComponent can be added from GUI
     component = '' # name of CustomComponent
     compname = 'os'
@@ -182,7 +226,10 @@ class BasicDefinition(object):
                   'plural': '',
                   'displayed': 'id', # component field in Event Console
                   'primaryKey': 'id',
-                  'properties': {'eventClass' : getEventClass('/Unknown')},
+                  'properties': {
+                                 'eventClass' : getEventClass('/Unknown'),
+                                 #'setfixedpasswords' : getSetter('setFixedPasswords'),
+                                 },
                   }
     createDS = False # whether or not to create CustomDatasource
     cmdFile = None # reference to script 
@@ -196,6 +243,8 @@ class BasicDefinition(object):
                                      }
                       }
     fromClass = "%s.%s.%s" % (zenpackroot, zenpackbase, component)
+    saveOld = False
+    loadOld = False
     
     def reset(self):
         '''reset all properties back to their defaults'''
@@ -210,7 +259,10 @@ class BasicDefinition(object):
                               'plural': '',
                               'displayed': 'id', # component field in Event Console
                               'primaryKey': 'id',
-                              'properties': {'eventClass' : getEventClass('/Unknown')},
+                              'properties': {
+                                             'eventClass' : getEventClass('/Unknown'),
+                                             #'setfixedpasswords' : getSetter('setFixedPasswords'),
+                                             },
                               }
         self.createDS = False 
         self.cmdFile = None 
@@ -218,10 +270,12 @@ class BasicDefinition(object):
         self.datapoints = []
         self.datasourceMethods = []
         self.packZProperties = [] 
-        self.componentMethods = [] 
+        self.componentMethods = []# [setFixedPasswords, getFixedPasswords] 
         self.componentAttributes = {} 
         self.parentClasses = []
         self.addManual = False
         self.compname = 'os'
-        
+        self.relmgr = CustomRelations()
+        self.saveOld = False
+        self.loadOld = False
 

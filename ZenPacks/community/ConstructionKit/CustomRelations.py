@@ -50,13 +50,13 @@ class CustomRelations(object):
         '''build list of from relations'''
         for r in self.relations:
             rel = self.createFrom(r)
-            if rel and rel not in self.fromrelations:  self.fromrelations.append(rel)
+            if rel is not None and rel not in self.fromrelations:  self.fromrelations.append(rel)
 
     def createToRelations(self):
         '''build list of to relations'''
         for r in self.relations:
             rel = self.createTo(r)
-            if rel and rel not in self.torelations:  self.torelations.append(rel)
+            if rel is not None and rel not in self.torelations:  self.torelations.append(rel)
     
     def addToRelations(self):
         '''decide whether or not to add new relation'''
@@ -103,10 +103,15 @@ class CustomRelations(object):
             except: 
                 log.warn("unable to run loadSchemaTarget for %s" % schema.remoteClass)
         return None
-
+    
     def import_class(self, name):
         '''find and return target class object'''
         m = importlib.import_module(name)
         classname = name.split('.')[-1]
         return getattr(m, classname)
+
+    def info(self):
+        ''''''
+        for x in self.relations:
+            log.debug('relation:%s' % x)
 

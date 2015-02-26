@@ -2,6 +2,7 @@ import Globals
 import logging
 log = logging.getLogger('zen.zenhub')
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
+from ZODB.POSException import POSKeyError
 from Products.ZenUtils.Utils import unused
 from ZenPacks.community.ConstructionKit.Construct import *
 from ZenPacks.community.ConstructionKit.Template import *
@@ -179,7 +180,7 @@ def getZProperties(definitions):
 def updateRelations(app, component=False):
     ''' update device relations '''
     dmd = app.getDmd()
-    log.info("updating relations")
+    log.info("updating relations with components=%s" % component)
     log.info('  Services')
     for b in dmd.Services.serviceSearch(): updateRelation(b.getObject())
     log.info("  Groups")
@@ -201,41 +202,62 @@ def updateRelations(app, component=False):
     commit()
     log.info("  Devices")
     for dev in dmd.Devices.getSubDevices():
+        #log.info("checking relations on %s" % dev.id) 
         updateRelation(dev)
         updateRelation(dev.os)
-        updateRelation(dev.hw)
+        try: updateRelation(dev.hw)
+        except: pass
         if component == True:
             for c in dev.getDeviceComponents():
                 updateRelation(c)
         commit()
-        
+
+
+def fixRels(ob): 
+    '''check and repair relations'''
+    log.info("fixing rels for %s" % ob.id) 
+    for name, schema in ob._relations: 
+        try:
+            # try to get the relation
+            relob = getattr(ob, name)
+            related = relob() 
+            if related is not None and type(related) == list:    
+                for r in related:
+                    try: r.index_object() 
+                    except POSKeyError: 
+                        log.warn("found POSKEY on %s" % r.id) 
+                        relob._delOb(r.id) 
+                    # see if it's a valid object
+                    try:  test=r.primaryAq()
+                    except:  
+                        # if not, remove it or report the error
+                        log.warn("removing %s from %s" % (r.id, name)) 
+                        related._remove(r)
+        except Exception: 
+            try: 
+                # delete the relation if it exists
+                ob._delOb(name) 
+                log.warn("deleted %s on %s" % (name, ob.id)) 
+                #print "deleted %s on %s" % (name, ob.id)
+            except Exception: pass 
+            # recreate the relation
+            ob._setObject(name, schema.createRelation(name)) 
+            #print "created %s on %s" % (name, ob.id)
+            log.warn("created %s on %s" % (name, ob.id)) 
+
+
 def updateRelation(ob):
     '''try to make relations current'''
     # first try straight build
-    try:  ob.buildRelations()
-    except: 
-        # next try check/repair
-        try: ob.checkRelations(repair=True)
-        except:
-            try:
-                # more drastic fix
-                for name, schema in ob._relations:
-                    try: ob._setObject(name, schema.createRelation(name))
-                    except:  pass
-            except:
-                try:
-                    # even more drastic, delete and recreate all relations
-                    for name, schema in ob._relations:
-                        try: 
-                            delattr(ob,name)
-                            ob._setObject(name, schema.createRelation(name))
-                        except:  pass
-                except:
-                    log.warn("error updating relations for %s" % ob.id)
+    try: ob.buildRelations()
+    except:
+        try:  ob.checkRelations(True)
+        except: fixRels(ob)
+
 
 def getDefinitionComponents(app, classname):
     '''return all component instances of a given class'''
-    log.info("getting all %s components" % classname)
+   #log.info("getting all %s components" % classname)
     components = []
     brains = app.dmd.global_catalog(meta_type=classname)
     for b in brains: components.append(b.getObject())
@@ -254,7 +276,7 @@ def removeDefinitionComponents(app, definition):
         try: c.manage_deleteComponent()
         except:
             try: c.getPrimaryParent()._delObject(c.id)
-            except: log.warn("ERROR REMOVING %s: %s on %s" % (name,c.id,  definition.component))
+            except: log.warn("ERROR REMOVING %s: %s on %s" % (c.meta_type, c.id,  definition.component))
     try: commit()
     except:
         log.warn("conflict detected, reattempting for %s" %  definition.component)
@@ -267,15 +289,22 @@ def saveDefinitionComponents(app, classname):
     dataFile = '/tmp/%s.p' % classname
     data = {}
     for c in components:
+        # first find the device id
+        dev = c.device().id
+        if dev not in data.keys():  data[dev] = {}
+        if classname not in data[dev].keys():  data[dev][classname] = {}
+        if c.id not in data[dev][classname].keys():   data[dev][classname][c.id] = []
         try:
             props = []
             for k,v in c.propertyItems():
                 if hasattr(v, '__call__'): continue
                 props.append((k,v))
-            data[c.device().id] = {classname: {c.id: props}}
+            data[dev][classname][c.id] = props
+            #print "saving %s from %s" % (c.id, c.device().id)
             log.info("saving %s from %s" % (c.id, c.device().id))
         except: log.warn("had trouble saving data for %s from %s" % (c.id, c.device().id))
     import cPickle as pickle
+    #print data
     with open(dataFile, 'wb') as fp: pickle.dump(data, fp)
 
 def loadDefinitionComponents(app, classname, addmethod):
@@ -284,20 +313,26 @@ def loadDefinitionComponents(app, classname, addmethod):
     data = {}
     try:
         with open(dataFile, 'rb') as fp: data = pickle.load(fp)
+        counter = 0
         for dev in data.keys():
             device = app.dmd.Devices.findDevice(dev)
             compdict = data[dev]
-            compitems = compdict[classname].keys()
+            compitems = data[dev][classname].keys()
             for i in compitems:
+                #print 'looking at %s' % i
                 item = compdict[classname][i]
                 props = convertToDict(item)
+                #print 'got props: %s' % props
+                counter +=1
                 method = getattr(device, addmethod)
                 try:
                     c = method(**props)
                     log.info("added %s to %s" % (c.id,device.id))
-                except:
-                    log.warn("problem adding %s to %s" % (c.id,device.id))
-            commit()
+                    #print "added %s to %s" % (c.id,device.id)
+                    commit()
+                except: log.warn("problem adding %s to %s" % (c.id,device.id))
+        #print "found %s components" % counter
+        log.info('loaded %s components' % counter)
     except: pass
         
 def convertToDict(props):

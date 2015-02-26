@@ -26,12 +26,14 @@ class Construct(object):
         ''''''''
         if d is not None:  self.addDefinition(d)
     
-    def addDefinition(self,d):
+    def addDefinition(self, d):
         ''' initialize definition objects'''
         self.definition = d.__name__
         self.cwd = os.path.dirname(inspect.getabsfile(d))
+        #print "PRE: %s has %s methods" % (d.component, len(d.componentMethods))
         d = update(d)
         self.d = d
+        #print "POST: %s has %s methods" % (self.d.component, len(self.d.componentMethods))
         log.debug("reading %s" % self.definition)
         self.compdata = self.fixPropertyId(self.d.componentData['properties'])
         self.dsdata = self.fixPropertyId(self.d.datasourceData['properties'])
@@ -44,7 +46,6 @@ class Construct(object):
         self.plural = self.d.componentData['plural']
         self.manual = self.d.addManual
         self.datasourceClass = '%sDataSource' % d.component
-        
         if self.zenpackname not in self.packs.keys():
             log.debug("adding %s to packs" % self.zenpackname)
             self.packs[self.zenpackname] = {'constructs' : {},
@@ -78,6 +79,7 @@ class Construct(object):
         # start a new helper to build the class
         construct.getHelper()
         # add any custom methods
+        #print "adding %s methods to %s" % (len(self.d.componentMethods), construct.helper.classobject.__name__)
         for m in self.d.componentMethods:  setattr(construct.helper.classobject, m.__name__, m)
         # set any default attributes
         for k,v in self.d.componentAttributes.items():  setattr(construct.helper.classobject, k, v)
@@ -204,3 +206,4 @@ class Construct(object):
         else: return '''def onCollectorInstalled(ob, event):\n    pass'''
     
     def addDeviceRelation(self): pass
+
