@@ -1,9 +1,0 @@
-*~
-*.pyc
-*.pyo
-src
-build
-setuptools*
-*.egg
-*.egg-info
-*dist
