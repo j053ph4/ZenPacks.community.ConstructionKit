@@ -17,6 +17,10 @@ def getEventClass(name):
     ''' convenience method for event class property '''
     return addProperty(title='Event Class', default=name, ptype='selection', isMethod=True, methodName='getEventClasses', isSetter=True)
 
+def getProductClass(name):
+    ''' convenience method for event class property '''
+    return addProperty(title='Product Class', default=name, ptype='string', isMethod=True, methodName='getProductClassLink', isSetter=True)
+
 def getSetter(name):
     ''' convenience method for property set after modeling '''
     return addProperty(title=name, default=name.lower(),  ptype='string', isMethod=True, visible=False, isSetter=True, methodName=name)
@@ -70,6 +74,22 @@ class CustomProperty(object):
     TEXTTYPES = ['string','lines','password']
     
     def __init__(self, title, group, default, ptype, switch, optional, override, isReference, order, width, visible, isMethod, methodName, isSetter):
+        '''
+            ptype:
+            default:
+            title:
+            group:
+            switch:
+            optional:
+            override:
+            isReference:
+            order:
+            width:
+            visible:
+            isMethod:
+            methodName:
+            isSetter:
+        '''
         self.ptype = ptype
         self.default = default
         self.title = title
@@ -159,6 +179,22 @@ class CustomProperty(object):
         data['interface'][self.id] = self.get_interface()
         return data
     
+    def get_product(self):
+        '''
+            return dict with the info, interface 
+            needed for setting component-level productClass
+        '''
+        getName = "_getProductClass"
+        setName = "_setProductClass"
+        getKlass = stringToMethod(getName, '''def %s(self):\n    return self._object.getProductKey()\n''' % (getName))
+        setKlass = stringToMethod(setName, '''def %s(self, value):\n    self._object.productKey = value\n    self._object.setProductKey(value)\n'''% (setName))
+        data = {'info': {}, 'interface': {}, 'infotext': {}}
+        data['info'][getName] = getKlass
+        data['info'][setName] = setKlass
+        data['info'][self.id] = property(getKlass, setKlass)
+        data['interface'][self.id] = self.interface_type()(title=_t(u'%s' % self.title), alwaysEditable=True, readonly=False, default=_t(u'%s' % self.default))
+        return data
+    
     def get_chooser(self, vocname, vocref, voctext):
         '''
             return dict with the info, interface, and vocablulary 
@@ -190,9 +226,9 @@ class CustomProperty(object):
         if is_datasource is True:  data['mode'] = 'w'
         if self.isMethod is True:  data['mode'] = 'w'
         if self.isSetter is True:
-            if self.methodName:  data['setter'] = self.methodName
+            if self.methodName is not None:  data['setter'] = self.methodName
             else:  data['setter'] = self.id
-        if self.id == 'eventClass':  data['mode'] = 'w'
+        if self.id in ['eventClass','productKey'] :  data['mode'] = 'w'
         return data
     
     def get_classattribute(self, is_datasource=False):

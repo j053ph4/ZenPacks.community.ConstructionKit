@@ -112,6 +112,11 @@ class Prototype(object):
                 data = p.get_chooser(vocname, vocref, self.template.COMPONENT_VOLCABULARY_METHOD)
                 for k in data.keys(): self.classdata[k].update(data[k])
                 self.classdata['configure'] = self.template.CONFIGURE_COMPONENT_VOLCABULARY % (vocname, vocref)
+            # for getting/setting product class
+            elif p.title == 'Product Class':
+                #print "PRODUCT CLASS: %s"  % p.title
+                data = p.get_product()
+                for k in data.keys(): self.classdata[k].update(data[k])
             # refer to pass-through for password
             elif p.ptype == 'password':
                 data = p.get_password()

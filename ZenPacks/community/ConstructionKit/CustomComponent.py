@@ -1,5 +1,6 @@
 from Products.ZenModel.OSComponent import OSComponent
 from Products.ZenModel.DeviceHW import DeviceHW
+from Products.ZenModel.MEProduct import MEProduct
 from AccessControl import ClassSecurityInfo
 from AccessControl import Permissions
 from Products.ZenModel.ZenossSecurity import *
@@ -28,16 +29,19 @@ def getProcessIdentifier(name, parameters):
     return ('%s %s' % (name, md5((parameters or '').strip()).hexdigest())).strip()
 
 
-class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
+class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence):
     '''Basic Class for ConstructionKit-based components'''
     
     primaryKey = ''
     nameKey = ''
+    productKey = 'Unknown'
     portal_type = meta_type = 'CustomComponent'
     isUserCreatedFlag = True
     status=0
     compname = 'os'
-    _relations = OSComponent._relations
+    _relations = OSComponent._relations + (
+        ("productClass", ToOne(ToMany, "Products.ZenModel.ProductClass", "instances")),
+    )
     
     factory_type_information = (
         {'id' : 'CustomComponent', 
@@ -58,6 +62,7 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
     
     def __init__(self, id, title=None):
         OSComponent.__init__(self, id, title)
+        MEProduct.__init__(self, id, title)
         super(CustomComponent, self).__init__(id, title)
     
     '''
@@ -141,6 +146,15 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
         '''Return the network link for the given IP'''
         try: return self.dmd.Networks.findIp(attribute).getIdLink()
         except: return attribute
+        
+    def getProductClassLink(self):
+        '''return list of event classes'''
+        try:
+            ob = getattr(self, 'productClass', None)()
+            return ob.getPrimaryLink()
+            #path ='%s/devicedetail#deviceDetailNav:%s:%s' % (ob.device().getPrimaryUrlPath(), ob.meta_type, ob.getPrimaryUrlPath())
+            #return '<a class="z-entity" href="%s">%s</a>' % (path, getattr(ob, attribute))
+        except: return 'None'
     
     '''
     functions for purposes of finding associated devices/components/objects
@@ -156,7 +170,7 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
             for b in inspect.getmro(klass):
                 if b.__name__ == 'OSComponent': return True
             return False
-        
+        # get a list of associated objects, making sure they are device components
         associates = []
         for rel in self.getRelationshipNames():
             try: target = getattr(self, rel)()
@@ -262,11 +276,21 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
                 fromrel._add(self)
             except RelationshipExistsError:  
                 log.warn("relation exists...resetting relation on %s:%s from %s to %s" % (self.id, object.id, fromrelation, torelation))
-                self.unsetCustomRelation(torelation)
+                #self.unsetCustomRelation(torelation)
+                torel = getattr(self, torelation)
+                fromrel = getattr(object, fromrelation)
+                try: torel._remove(object) 
+                except:  
+                    log.warn("error removing torel")
+                    #pass
+                try: fromrel._remove(self)
+                except:  
+                    log.warn("error removing fromrel")
+                    pass
                 try: self.setCustomRelation(object, torelation, fromrelation)
                 except: log.warn("problem resetting relation on %s:%s from %s to %s" % (self.id, object.id, fromrelation, torelation))
             except: log.warn("problem setting relation on %s:%s from %s to %s" % (self.id, object.id, fromrelation, torelation))
-    
+
     def removeCustomRelations(self):
         ''' remove custom component relations '''
         log.debug('removeCustomRelations on %s' % self.id)
@@ -278,7 +302,7 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
     def updateCustomRelations(self):
         ''' update component relations based on setter methods in _properties '''
         log.debug('updateCustomRelations on %s' % self.id)
-        ignoreKeys = ['productionState','preMWProductionState','eventClass',]
+        ignoreKeys = ['productionState','preMWProductionState','eventClass', 'productKey']
         self.removeCustomRelations()
         for data in self._properties:
             if data['id'] in ignoreKeys:  continue
@@ -327,6 +351,60 @@ class CustomComponent(OSComponent, ManagedEntity, ZenPackPersistence):
         '''pass-through for later override'''
         log.debug("updateDataMap for %s: %s" % (self.id,datamap))
         return datamap
+    
+    ''' 
+    functions for setting productClass
+    '''
+   
+    def setProduct(self, productName,  manufacturer="Unknown",
+                    newProductName="", REQUEST=None, **kwargs):
+        """Set the product class of this software.
+        """
+        if not manufacturer: manufacturer = "Unknown"
+        if newProductName: productName = newProductName
+        prodobj = self.getDmdRoot("Manufacturers").createSoftwareProduct(
+                                    productName, manufacturer, **kwargs)
+        self.productClass.addRelation(prodobj)
+        if REQUEST:
+            messaging.IMessageSender(ob).sendToBrowser(
+                'Product Set',
+                ("Set Manufacturer %s and Product %s."
+                                    % (manufacturer, productName))
+            )
+            return self.callZenScreen(REQUEST)
+
+    def setProductKey(self, prodKey, manufacturer=None):
+        """Set the product class of this software by its productKey.
+        """
+        log.debug("setProductKey on %s" % (self.id))
+        if prodKey:
+            # Store these so we can return the proper value from getProductKey
+            self._prodKey = prodKey
+            self._manufacturer = manufacturer
+            if manufacturer is None:
+                manufacturer = 'Unknown'
+            manufs = self.getDmdRoot("Manufacturers")
+            prodobj = manufs.createSoftwareProduct(prodKey, manufacturer)
+            self.productClass.addRelation(prodobj)
+            # set product key for assocated components
+            for a in self.getAssociates():
+                print "found assoc: %s" % a.id
+                if a.meta_type in ['OSProcess','IpService','WinService']:  
+                    a.productClass.addRelation(prodobj)
+            #self.setAssociatedProductKey()
+        else:
+            self.productClass.removeRelation()
+    
+    def setAssociatedProductKey(self):
+        """ Set the productClass relation for associated OSProcess, 
+            IpService, and WinService components
+        """
+        log.debug("setAssociatedProductKey on %s" % (self.id))
+        product = self.getProductKey()
+        for a in self.getAssociates():
+            if a.meta_type in ['OSProcess','IpService','WinService']: 
+                log.debug("setting product key for %s to %s" % (a.id, product))
+                a.setProductKey(product)
 
 class CustomHWComponent(DeviceHW, CustomComponent):
     '''for components with hw relation'''

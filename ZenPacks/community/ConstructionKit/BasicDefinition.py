@@ -187,7 +187,11 @@ def getBasicDefinitionData(version, root, base, component, singular, plural):
                             'plural': plural,
                             'displayed' : 'id', # component field in Event Console
                             'primaryKey' : 'id',
-                            'properties' : {'eventClass' : getEventClass('/Unknown'),},
+                            'properties' : {
+                                            'eventClass' : getEventClass('/Unknown'),
+                                            'productKey' : getProductClass('Unknown'),
+                                            #'productClass' : getReferredMethod('Product', 'getProductClassLink'),
+                                            },
                            },
         'createDS' : False,
         'cmdFile' : None,
@@ -228,6 +232,7 @@ class BasicDefinition(object):
                   'primaryKey': 'id',
                   'properties': {
                                  'eventClass' : getEventClass('/Unknown'),
+                                 'productKey' : getProductClass('Unknown'),
                                  #'setfixedpasswords' : getSetter('setFixedPasswords'),
                                  },
                   }
@@ -261,6 +266,7 @@ class BasicDefinition(object):
                               'primaryKey': 'id',
                               'properties': {
                                              'eventClass' : getEventClass('/Unknown'),
+                                             'productKey' : getProductClass('Unknown'),
                                              #'setfixedpasswords' : getSetter('setFixedPasswords'),
                                              },
                               }

@@ -43,8 +43,7 @@ class ZenPack(ZenPackConstruct):
         if type(v) != bool:
             cid += str(v)
     cid = re.sub('[^A-Za-z0-9]+', '_', cid)
-    if len(cid) > 64 :
-        cid = cid[:64]
+    if len(cid) > 64 : cid = cid[:64]
     id = prepId(cid)
     component = %s(id)
     relation = target.%s.%s
@@ -53,6 +52,7 @@ class ZenPack(ZenPackConstruct):
     for k,v in kwargs.iteritems():
         setattr(component,k,v)\n%s
     component.updateCustomRelations()
+    component.setProductKey(component.productKey)
     '''
 
     CREATEMETHOD = '''def %s(self, **kwargs):\n    target = self\n%s\n    return component\n'''
