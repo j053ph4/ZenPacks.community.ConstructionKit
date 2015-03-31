@@ -3,7 +3,7 @@
 # or saved.  Do not modify them directly here.
 # NB: PACKAGES is deprecated
 NAME = "ZenPacks.community.ConstructionKit"
-VERSION = "3.0"
+VERSION = "3.1"
 AUTHOR = "Joseph Anderson"
 LICENSE = "Apache"
 NAMESPACE_PACKAGES = ['ZenPacks', 'ZenPacks.community']
