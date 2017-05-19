@@ -15,7 +15,7 @@ class Initializer(object):
         self.definitions = loadDefinitions(definition)
         self.props = getZProperties(self.definitions)
         self.constructs = getConstructs(self.definitions)
-    
+
     def rebuild(self):
         '''rewrite zenpack files'''
         for c in self.constructs: c.buildZenPackFiles()
@@ -26,41 +26,41 @@ class ZenPackConstruct(ZenPackBase):
     definitions = []
     constructs = []
     packZProperties = []
-    
+
     def shouldSave(self):
         ''''''
         for d in self.definitions:
             if d.saveOld is True:  return True
         return False
-    
+
     def shouldLoad(self):
         ''''''
         for d in self.definitions:
             if d.saveOld is True:  return True
         return False
-    
+
     def convertToDict(self, props): return convertToDict(props)
-    
+
     def saveComponents(self, app):
         ''' save components to file '''
         for c in self.constructs: saveDefinitionComponents(app, c.componentClass)
-    
+
     def loadComponents(self, app):
         ''' load components from file '''
-        #log.info("loading components")
+        # log.info("loading components")
         for c in self.constructs: loadDefinitionComponents(app, c.componentClass, c.addMethodName)
-    
+
     def updateRelations(self, app, components=False):
         ''' update relations '''
         log.info("updating relations")
         for d in self.definitions:
             log.info("checking for relations on %s" % d.component)
             if hasattr(d, 'relmgr') and d.relmgr is not None:
-                if len(d.relmgr.relations) > 1: 
+                if len(d.relmgr.relations) > 1:
                     log.info("will need to update component relations for %s" % d.component)
                     components = True
         return updateRelations(app, components)
-    
+
     def install(self, app):
         for c in self.constructs: c.buildZenPackFiles()
         ZenPackBase.install(self, app)
@@ -70,7 +70,7 @@ class ZenPackConstruct(ZenPackBase):
             try: self.loadComponents(app)
             except:  log.warn("problem loading components")
         else: log.info("not loading components")
-    
+
     def remove(self, app, leaveObjects=False):
         ''''''
         if self.shouldSave() is True:
@@ -85,5 +85,5 @@ class ZenPackConstruct(ZenPackBase):
         removeRels(app, zenpackname)
         removeRelations(self.definitions)
         self.updateRelations(app)
-        
+
 

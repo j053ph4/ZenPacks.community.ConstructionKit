@@ -17,13 +17,13 @@ class CustomCheckCommand(ZenScriptBase):
     def buildOptions(self):
         ''''''
         ZenScriptBase.buildOptions(self)
-    
+
     def run(self):
         ''''''
         self.initialize()
         self.evalStatus()
         self.finished()
-        
+
     def initialize(self):
         ''''''
         pass
@@ -31,22 +31,22 @@ class CustomCheckCommand(ZenScriptBase):
     def evalStatus(self):
         ''''''
         pass
-    
+
     def finished(self):
         ''''''
         print self.message
-        sys.exit(self.status) 
-        
+        sys.exit(self.status)
+
     def startWatch(self):
         '''start the clock'''
         self.start = time.time()
-    
+
     def stopWatch(self, message):
         '''check run time of script'''
         end = time.time() - self.start
         if self.verbose  is True:  print '%s in %0.1f s' % (message, end)
         self.start = time.time()
-    
+
 if __name__ == "__main__":
     u = CustomCheckCommand()
     u.run()

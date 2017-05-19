@@ -23,13 +23,13 @@ def getProductClass(name):
 
 def getSetter(name):
     ''' convenience method for property set after modeling '''
-    return addProperty(title=name, default=name.lower(),  ptype='string', isMethod=True, visible=False, isSetter=True, methodName=name)
- 
+    return addProperty(title=name, default=name.lower(), ptype='string', isMethod=True, visible=False, isSetter=True, methodName=name)
+
 def getReferredMethod(title, name):
     ''' convenience method for display property '''
-    return addProperty(title, name, ptype='string', isMethod=True, optional=False, isReference=True, methodName=name) 
+    return addProperty(title, name, ptype='string', isMethod=True, optional=False, isReference=True, methodName=name)
 
-def addProperty(title, group='Basic', default=None, ptype='string', switch=None, optional=True, override=False, 
+def addProperty(title, group='Basic', default=None, ptype='string', switch=None, optional=True, override=False,
                 isReference=False, order=None, width=120, visible=True, isMethod=False, methodName=None, isSetter=False):
     ''' return dictionary describing component properties '''
     if optional == 'false':  optional = False
@@ -39,22 +39,22 @@ def addProperty(title, group='Basic', default=None, ptype='string', switch=None,
 class CustomProperty(object):
     '''Class designed to manage class properties depending on type and other attributes of each property'''
     id = ''
-    ptype = None # type per keys of TYPESCHEMA
-    default = None # default value
-    title = None # displayed name
-    group = None # details grouping
-    switch = None # command line parameter switch
-    optional = True # whether property MUST exist
-    override = False # whether to override with default properties
-    isReference = False  # is a reference to another property 
-    isText = True # is a text type
-    order = None # order on details pane
-    visible = True # whether to display in details pane
-    isMethod = False #if this is a method
+    ptype = None  # type per keys of TYPESCHEMA
+    default = None  # default value
+    title = None  # displayed name
+    group = None  # details grouping
+    switch = None  # command line parameter switch
+    optional = True  # whether property MUST exist
+    override = False  # whether to override with default properties
+    isReference = False  # is a reference to another property
+    isText = True  # is a text type
+    order = None  # order on details pane
+    visible = True  # whether to display in details pane
+    isMethod = False  # if this is a method
     methodName = ''
     isSetter = False
-    width=260
-    
+    width = 260
+
     TYPESCHEMA = {
               'string': {'interface': SingleLineText, 'xtype': 'textfield', 'quote': True},
               'lines': {'interface': MultiLineText, 'xtype': 'textarea', 'quote': True},
@@ -68,11 +68,11 @@ class CustomProperty(object):
               'multichoice': {'interface': schema.MultiChoice, 'xtype': 'combo', 'quote': False},
               'entity': {'interface':  schema.Entity, 'xtype': 'field', 'quote': False},
               'file': {'interface': schema.File, 'xtype': 'field', 'quote': False},
-              #'method': {'interface': SingleLineText, 'xtype': 'method', 'quote': False},
+              # 'method': {'interface': SingleLineText, 'xtype': 'method', 'quote': False},
               }
-    
-    TEXTTYPES = ['string','lines','password']
-    
+
+    TEXTTYPES = ['string', 'lines', 'password']
+
     def __init__(self, title, group, default, ptype, switch, optional, override, isReference, order, width, visible, isMethod, methodName, isSetter):
         '''
             ptype:
@@ -107,7 +107,7 @@ class CustomProperty(object):
         self.methodName = methodName
         self.isSetter = isSetter
         if self.ptype not in self.TEXTTYPES:  self.isText = False
-    
+
     def get(self):
         ''' return dict of this property's attributes'''
         return {
@@ -122,22 +122,22 @@ class CustomProperty(object):
             'override': self.override,
             'order': self.order
             }
-    
+
     def xtype(self): return self.TYPESCHEMA[self.ptype]['xtype']
-    
+
     def interface_type(self):
         '''determine which interface schema is appropriate for this property'''
         try: return self.TYPESCHEMA[self.ptype]['interface']
         except: return self.TYPESCHEMA['string']['interface']
-    
-    def quote(self): 
+
+    def quote(self):
         '''whether this property should be quoted'''
         return self.TYPESCHEMA[self.ptype]['quote']
-    
+
     def is_optional(self):
         '''convert optional boolean to lowercase string'''
         return str(self.optional).lower()
-    
+
     def get_info(self):
         '''return object suitable for info.py'''
         if self.isMethod is True:
@@ -145,7 +145,7 @@ class CustomProperty(object):
             return stringToMethod(self.id, text)
         else:
             return ProxyProperty('%s' % self.id)
-    
+
     def get_interface(self):
         '''return appropriate schema module for interfaces.py'''
         # property references a method
@@ -162,7 +162,7 @@ class CustomProperty(object):
             return self.interface_type()(title=_t(u'%s' % self.title), group=_t(u'%s' % self.group), order=self.order)
         else:
             return self.interface_type()(title=_t(u'%s' % self.title), group=_t(u'%s' % self.group))
-    
+
     def get_password(self):
         '''
             return dict with the info, interface 
@@ -171,14 +171,14 @@ class CustomProperty(object):
         getName = "_get%s" % self.id.lower().capitalize()
         setName = "_set%s" % self.id.lower().capitalize()
         getChoice = stringToMethod(getName, '''def %s(self):\n    return self._object.getPassword("%s")\n''' % (getName, self.id))
-        setChoice = stringToMethod(setName, '''def %s(self, value):\n    self._object.setPassword("%s", value)\n'''% (setName, self.id))
+        setChoice = stringToMethod(setName, '''def %s(self, value):\n    self._object.setPassword("%s", value)\n''' % (setName, self.id))
         data = {'info': {}, 'interface': {}, 'infotext': {}}
         data['info'][getName] = getChoice
         data['info'][setName] = setChoice
         data['info'][self.id] = property(getChoice, setChoice)
         data['interface'][self.id] = self.get_interface()
         return data
-    
+
     def get_product(self):
         '''
             return dict with the info, interface 
@@ -187,14 +187,14 @@ class CustomProperty(object):
         getName = "_getProductClass"
         setName = "_setProductClass"
         getKlass = stringToMethod(getName, '''def %s(self):\n    return self._object.getProductKey()\n''' % (getName))
-        setKlass = stringToMethod(setName, '''def %s(self, value):\n    self._object.productKey = value\n    self._object.setProductKey(value)\n'''% (setName))
+        setKlass = stringToMethod(setName, '''def %s(self, value):\n    self._object.productKey = value\n    self._object.setProductKey(value)\n''' % (setName))
         data = {'info': {}, 'interface': {}, 'infotext': {}}
         data['info'][getName] = getKlass
         data['info'][setName] = setKlass
         data['info'][self.id] = property(getKlass, setKlass)
         data['interface'][self.id] = self.interface_type()(title=_t(u'%s' % self.title), alwaysEditable=True, readonly=False, default=_t(u'%s' % self.default))
         return data
-    
+
     def get_chooser(self, vocname, vocref, voctext):
         '''
             return dict with the info, interface, and vocablulary 
@@ -205,7 +205,7 @@ class CustomProperty(object):
         setName = "_set%s" % self.id
         listChoices = stringToMethod(listName, '''def %s(self):\n    return self._object.%s()\n''' % (listName, self.methodName))
         getChoice = stringToMethod(getName, '''def %s(self):\n    return self._object.%s\n''' % (getName, self.id))
-        setChoice = stringToMethod(setName, '''def %s(self, value):\n    self._object.%s = value\n'''% (setName, self.id))
+        setChoice = stringToMethod(setName, '''def %s(self, value):\n    self._object.%s = value\n''' % (setName, self.id))
         data = {'info': {}, 'interface': {}, 'infotext': {}}
         data['info'][listName] = listChoices
         data['info'][getName] = getChoice
@@ -214,8 +214,8 @@ class CustomProperty(object):
         data['infotext'][vocname] = voctext % (vocname, listName)
         data['interface'][self.id] = schema.Choice(title=_t(u'%s' % self.title), alwaysEditable=True, vocabulary=vocref, default=self.default)
         return data
-    
-    def get_classproperty(self,is_datasource=False):
+
+    def get_classproperty(self, is_datasource=False):
         '''return object suitable for component/datasource property'''
         data = {
                 'id': self.id,
@@ -228,9 +228,9 @@ class CustomProperty(object):
         if self.isSetter is True:
             if self.methodName is not None:  data['setter'] = self.methodName
             else:  data['setter'] = self.id
-        if self.id in ['eventClass','productKey'] :  data['mode'] = 'w'
+        if self.id in ['eventClass', 'productKey'] :  data['mode'] = 'w'
         return data
-    
+
     def get_classattribute(self, is_datasource=False):
         '''return object suitable for component/datasource attribute'''
         # for components
@@ -249,9 +249,9 @@ class CustomProperty(object):
         # for datasources
         else:
             # cycletime and timeout should be literal and not references
-            if self.id  in ['cycletime','timeout']: return self.default
+            if self.id  in ['cycletime', 'timeout']: return self.default
             else: return '${here/%s}' % self.id
-    
+
     def get_override(self):
         '''
             text string to override default values for "addXXXXX" method
@@ -259,15 +259,15 @@ class CustomProperty(object):
         if self.override is True:
             if self.isMethod is True:  return '''component.%s(%s)\n''' % (self.title, self.default)
             else:
-                # set the property to a device attribute 
-                if self.isReference is True: 
+                # set the property to a device attribute
+                if self.isReference is True:
                     return '''setattr(component,"%s",target.%s)\n''' % (self.id, self.default)
                 else:  # set the property to the literal value provided
                     if self.isText is True:
                         # return quoted string for text data
                         return '''setattr(component,"%s","'%s'")\n''' % (self.id, self.default)
                     else:  return '''setattr(component,"%s","%s")\n''' % (self.id, self.default)
-                
+
     def jsonAdd(self):
         ''' format fields for the component-add.js dialog window file '''
         if self.optional is False:
@@ -276,16 +276,16 @@ class CustomProperty(object):
                     'name' : self.id,
                     'fieldLabel' : _t('%s') % self.title,
                     'id' : '%sField' % self.id,
-                    'width' : self.width*2 ,
+                    'width' : self.width * 2 ,
                     'allowBlank' : self.is_optional()
                     }
         return None
-        
+
     def jsonComponentField(self):
         ''' fields for the component.js grid file '''
         if self.optional is False: return {'name': '%s' % self.id}
         return None
-    
+
     def jsonComponentColumn(self):
         '''columns for the component.js grid file'''
         if self.optional is False:

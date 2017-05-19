@@ -38,7 +38,7 @@ class LoadComponents(ZenScriptBase):
         self.parser.add_option("-Z", dest="zenpack", help="Zenpack Name (default all)", default="all")
 
 if __name__ == "__main__":
-    u =  LoadComponents()
+    u = LoadComponents()
     u.run()
 
 
