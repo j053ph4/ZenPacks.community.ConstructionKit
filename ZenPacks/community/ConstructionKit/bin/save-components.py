@@ -31,7 +31,7 @@ class SaveComponents(ZenScriptBase):
                 for d in c.packs[p]['constructs'].keys():
                     construct = c.packs[p]['constructs'][d]['component']
                     saveDefinitionComponents(self.dmd, construct.classname)
-    
+
     def buildOptions(self):
         ZenScriptBase.buildOptions(self)
         self.parser.add_option("-Z", dest="zenpack", help="Zenpack Name (default all)", default="all")

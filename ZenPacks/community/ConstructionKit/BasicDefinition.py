@@ -1,14 +1,14 @@
 from Products.ZenModel.migrate.Migrate import Version
 from ZenPacks.community.ConstructionKit.CustomProperty import *
 from ZenPacks.community.ConstructionKit.CustomRelations import *
-#from ZenPacks.community.ConstructionKit.CustomComponent import getFixedPasswords,setFixedPasswords
+# from ZenPacks.community.ConstructionKit.CustomComponent import getFixedPasswords,setFixedPasswords
 import logging
 log = logging.getLogger('zen.zenhub')
 
 def fixDict(old, new):
-    for a,b in new.items():
+    for a, b in new.items():
         if type(b) == dict:
-            try:  old.update(fixDict(old[a],new[a]))
+            try:  old.update(fixDict(old[a], new[a]))
             except:  old[a] = b
         else:
             try:  test = old[a]
@@ -23,9 +23,9 @@ def update(ob):
     base.reset()
     basedata = base.__dict__.copy()
     newdata = ob.__dict__.copy()
-    updateddata =  fixDict(newdata, basedata)
+    updateddata = fixDict(newdata, basedata)
     object = ob()
-    for k,v in updateddata.items():  setattr(object, k , v)
+    for k, v in updateddata.items():  setattr(object, k , v)
     object.component = ob.component
     object.datasourceData['properties'].update(object.componentData['properties'].copy())
     object.fromClass = "%s.%s.%s" % (object.zenpackroot, object.zenpackbase, object.component)
@@ -35,7 +35,7 @@ def update(ob):
     return object
 
 def addDefinitionDeviceRelation(definition,
-                              fromname, fromtype, fromclass, fromattribute, 
+                              fromname, fromtype, fromclass, fromattribute,
                               toname, totype, toclass, toattribute,
                               title=None, linkattrib=None):
     ''' link from component to another device '''
@@ -43,7 +43,7 @@ def addDefinitionDeviceRelation(definition,
     if linkattrib == None: linkattrib = fromattribute
     data = {
             'get': {
-                    'name': "get%s" % toname.capitalize(), 
+                    'name': "get%s" % toname.capitalize(),
                     'text': '''def %s(ob):  return ob.findDevice(ob.%s, '%s')\n''',
                     'args': (fromattribute, toattribute),
                     },
@@ -62,16 +62,16 @@ def addDefinitionDeviceRelation(definition,
 
 
 def addDefinitionSelfComponentRelation(definition,
-                              fromname, fromtype, fromclass, fromattribute, 
+                              fromname, fromtype, fromclass, fromattribute,
                               toname, totype, toclass, toattribute, title=None, linkattrib=None):
     ''' link from component to another component on the same device '''
-    #log.debug("addDefinitionSelfComponentRelation FROM: %s-%s TO: %s-%s" % (fromname,fromclass,toname,toclass))
+    # log.debug("addDefinitionSelfComponentRelation FROM: %s-%s TO: %s-%s" % (fromname,fromclass,toname,toclass))
     if title == None: title = toname.capitalize()
     if linkattrib == None: linkattrib = toattribute
     classname = toclass.split('.')[-1]
     data = {
             'get': {
-                    'name': "get%s" % toname.capitalize(), 
+                    'name': "get%s" % toname.capitalize(),
                     'text': '''def %s(ob):  return ob.findDeviceComponent(ob.device(), '%s', '%s', ob.%s)\n''',
                     'args': (classname, toattribute, fromattribute),
                     },
@@ -83,14 +83,14 @@ def addDefinitionSelfComponentRelation(definition,
             'link': {
                     'name': "get%sLink" % toname.capitalize(),
                     'text': '''def %s(ob):\n    try:\n        return ob.getRelatedComponentLink('%s','%s')\n    except:\n        pass\n''',
-                    'args': ( toname, linkattrib)
+                    'args': (toname, linkattrib)
                     },
             }
     addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass)
 
 
 def addDefinitionDeviceComponentRelation(definition, devkey, devvalue,
-                              fromname, fromtype, fromclass, fromattribute, 
+                              fromname, fromtype, fromclass, fromattribute,
                               toname, totype, toclass, toattribute,
                                title=None, linkattrib=None):
     ''' link from component to another component on another device '''
@@ -99,7 +99,7 @@ def addDefinitionDeviceComponentRelation(definition, devkey, devvalue,
     classname = toclass.split('.')[-1]
     data = {
             'get': {
-                    'name': "get%s" % toname.capitalize(), 
+                    'name': "get%s" % toname.capitalize(),
                     'text': '''def %s(ob):  return ob.findDeviceComponent(ob.findDevice(ob.%s, '%s'), '%s', '%s', ob.%s)\n''',
                     'args': (devvalue, devkey, classname, toattribute, fromattribute),
                     },
@@ -117,15 +117,15 @@ def addDefinitionDeviceComponentRelation(definition, devkey, devvalue,
     addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass)
 
 def addDefinitionAnyComponentRelation(definition,
-                              fromname, fromtype, fromclass, fromattribute, 
-                              toname, totype, toclass, toattribute, 
+                              fromname, fromtype, fromclass, fromattribute,
+                              toname, totype, toclass, toattribute,
                               title=None, linkattrib='id'):
     ''' link from component to another component on another device '''
     if title == None: title = toname.capitalize()
     classname = toclass.split('.')[-1]
     data = {
             'get': {
-                    'name': "get%s" % toname.capitalize(), 
+                    'name': "get%s" % toname.capitalize(),
                     'text': '''def %s(ob):  return ob.findComponent('%s', '%s', ob.%s)\n''',
                     'args': (classname, toattribute, fromattribute),
                     },
@@ -137,7 +137,7 @@ def addDefinitionAnyComponentRelation(definition,
             'link': {
                     'name': "get%sLink" % toname.capitalize(),
                     'text': '''def %s(ob):\n    try:\n        return ob.getRelatedComponentLink('%s','%s')\n    except:\n        pass\n''',
-                    'args': ( toname, toattribute)
+                    'args': (toname, toattribute)
                     },
             }
     addRelations(definition, title, data, fromname, fromtype, fromclass, toname, totype, toclass)
@@ -156,7 +156,7 @@ def addMethods(definition, title, data={}):
     names = []
     for v in data.values():
         name = v['name']
-        args = (name,) 
+        args = (name,)
         args += v['args']
         text = v['text'] % args
         names.append(name)
@@ -168,7 +168,7 @@ def addMethods(definition, title, data={}):
     definition.ignoreKeys += [data['set']['name'].lower(), data['link']['name']]
 
 
-def getBasicDefinitionData(version, root, base, component, singular, plural): 
+def getBasicDefinitionData(version, root, base, component, singular, plural):
     '''basic Definition dictionary'''
     return {
         'version' : version,
@@ -185,12 +185,12 @@ def getBasicDefinitionData(version, root, base, component, singular, plural):
         'componentData' : {
                             'singular' : singular,
                             'plural': plural,
-                            'displayed' : 'id', # component field in Event Console
+                            'displayed' : 'id',  # component field in Event Console
                             'primaryKey' : 'id',
                             'properties' : {
                                             'eventClass' : getEventClass('/Unknown'),
                                             'productKey' : getProductClass('Unknown'),
-                                            #'productClass' : getReferredMethod('Product', 'getProductClassLink'),
+                                            # 'productClass' : getReferredMethod('Product', 'getProductClassLink'),
                                             },
                            },
         'createDS' : False,
@@ -203,8 +203,8 @@ def getBasicDefinitionData(version, root, base, component, singular, plural):
                                 'cycletime' : addProperty('Cycle Time (s)', 'Timing', 300, 'int'),
                                 }
                             },
-        
-        'fromClass' : "%s.%s.%s" % (root, base, component), 
+
+        'fromClass' : "%s.%s.%s" % (root, base, component),
         'saveOld': False,
         'loadOld': False,
         }
@@ -214,33 +214,33 @@ class BasicDefinition(object):
         Basic description of CustomComponent and CustomDatasource
     """
     version = None
-    zenpackroot = 'ZenPacks.community' # ZenPack Root
-    zenpackbase = None # ZenaPack Name
-    packZProperties = [] # zproperties
-    componentMethods = [] # [setFixedPasswords, getFixedPasswords] # list of custom methods to add to CustomComponent class
-    componentAttributes = {} # list of custom attributes for CustomComponent class 
-    parentClasses = [] # any parent classes besides CustomComponent
-    relmgr = None #CustomRelations()
-    addManual = False # whether CustomComponent can be added from GUI
-    component = '' # name of CustomComponent
+    zenpackroot = 'ZenPacks.community'  # ZenPack Root
+    zenpackbase = None  # ZenaPack Name
+    packZProperties = []  # zproperties
+    componentMethods = []  # [setFixedPasswords, getFixedPasswords] # list of custom methods to add to CustomComponent class
+    componentAttributes = {}  # list of custom attributes for CustomComponent class
+    parentClasses = []  # any parent classes besides CustomComponent
+    relmgr = None  # CustomRelations()
+    addManual = False  # whether CustomComponent can be added from GUI
+    component = ''  # name of CustomComponent
     compname = 'os'
     # CustomComponent properties
     componentData = {
                   'singular': '',
                   'plural': '',
-                  'displayed': 'id', # component field in Event Console
+                  'displayed': 'id',  # component field in Event Console
                   'primaryKey': 'id',
                   'properties': {
                                  'eventClass' : getEventClass('/Unknown'),
                                  'productKey' : getProductClass('Unknown'),
-                                 #'setfixedpasswords' : getSetter('setFixedPasswords'),
+                                 # 'setfixedpasswords' : getSetter('setFixedPasswords'),
                                  },
                   }
-    createDS = False # whether or not to create CustomDatasource
-    cmdFile = None # reference to script 
-    ignoreKeys = [] # property ids to ignore when evaluating CustomDatasource getCommand method
-    datapoints = [] # expected datapoints output from cmdFile
-    datasourceMethods = [] # additional methods to add to CustomDatasource class
+    createDS = False  # whether or not to create CustomDatasource
+    cmdFile = None  # reference to script
+    ignoreKeys = []  # property ids to ignore when evaluating CustomDatasource getCommand method
+    datapoints = []  # expected datapoints output from cmdFile
+    datasourceMethods = []  # additional methods to add to CustomDatasource class
     # CustomDatasource properties
     datasourceData = {'properties': {
                                      'timeout' : addProperty('Timeout (s)', 'Timing', 60, ptype='int', switch='-t'),
@@ -250,7 +250,7 @@ class BasicDefinition(object):
     fromClass = "%s.%s.%s" % (zenpackroot, zenpackbase, component)
     saveOld = False
     loadOld = False
-    
+
     def reset(self):
         '''reset all properties back to their defaults'''
         self.relmgr = CustomRelations()
@@ -262,22 +262,22 @@ class BasicDefinition(object):
         self.componentData = {
                               'singular': '',
                               'plural': '',
-                              'displayed': 'id', # component field in Event Console
+                              'displayed': 'id',  # component field in Event Console
                               'primaryKey': 'id',
                               'properties': {
                                              'eventClass' : getEventClass('/Unknown'),
                                              'productKey' : getProductClass('Unknown'),
-                                             #'setfixedpasswords' : getSetter('setFixedPasswords'),
+                                             # 'setfixedpasswords' : getSetter('setFixedPasswords'),
                                              },
                               }
-        self.createDS = False 
-        self.cmdFile = None 
-        self.ignoreKeys = [] 
+        self.createDS = False
+        self.cmdFile = None
+        self.ignoreKeys = []
         self.datapoints = []
         self.datasourceMethods = []
-        self.packZProperties = [] 
-        self.componentMethods = []# [setFixedPasswords, getFixedPasswords] 
-        self.componentAttributes = {} 
+        self.packZProperties = []
+        self.componentMethods = []  # [setFixedPasswords, getFixedPasswords]
+        self.componentAttributes = {}
         self.parentClasses = []
         self.addManual = False
         self.compname = 'os'

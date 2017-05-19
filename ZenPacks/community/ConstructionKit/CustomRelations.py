@@ -10,13 +10,13 @@ class CustomRelations(object):
     '''
     def __init__(self):
         self.relations = []
-        self.fromrelations =  []
+        self.fromrelations = []
         self.torelations = []
-    
-    def fixClass(self,name):
+
+    def fixClass(self, name):
         '''ensure that fromClass is populated'''
         for r in self.relations: r['fromClass'] = name
-    
+
     def add(self, fromName, fromType, fromClass, toName, toType, toClass, createTo=True, createFrom=True):
         '''add to list of relations'''
         info = {
@@ -30,14 +30,14 @@ class CustomRelations(object):
                 'createFrom' : createFrom
                 }
         if info not in self.relations:  self.relations.append(info)
-    
+
     def createFrom(self, info):
         '''return a new from relation'''
         if info['createFrom'] == True:
             relation = ("%s" % info['toName'], info['toType'](info['fromType'], "%s" % info['toClass'], "%s" % info['fromName']))
             return relation
         return None
-    
+
     def createTo(self, info):
         '''return a new to relation'''
         if info['createTo'] == True:
@@ -45,7 +45,7 @@ class CustomRelations(object):
             target = self.import_class(info['toClass'])
             return (target, relation)
         return None
-    
+
     def createFromRelations(self):
         '''build list of from relations'''
         for r in self.relations:
@@ -57,7 +57,7 @@ class CustomRelations(object):
         for r in self.relations:
             rel = self.createTo(r)
             if rel is not None and rel not in self.torelations:  self.torelations.append(rel)
-    
+
     def addToRelations(self):
         '''decide whether or not to add new relation'''
         for target, relation in self.torelations:
@@ -66,14 +66,14 @@ class CustomRelations(object):
             for x in target._relations:
                 if x[0] == relname: add = False
             if add is True: target._relations += (relation,)
-       
+
     def removeToRelations(self):
         '''remove to rels'''
         for target, relation in self.torelations:
             relname, schema = relation
             log.info("removing TO rel %s from %s to %s" % (relname, target.__name__, schema.remoteClass))
             target._relations = tuple([x for x in target._relations if x[0] not in (relname)])
-    
+
     def addFromRelations(self):
         '''add from relations'''
         for relation in self.fromrelations:
@@ -84,26 +84,26 @@ class CustomRelations(object):
                 if x[0] == relname: add = False
             if add is True: target._relations += (relation,)
         return tuple(self.fromrelations)
-    
+
     def removeFromRelations(self):
         '''remove from relations'''
         for relname, schema in self.fromrelations:
             target = self.loadSchemaTarget(schema)
             log.info("removing FROM rel %s from %s to %s" % (relname, target.__name__, schema.remoteClass))
             target._relations = tuple([x for x in target._relations if x[0] not in (relname)])
-            
+
     def loadSchemaTarget(self, schema):
         ''' load all Definition classes from python module'''
         import inspect, importlib
-        module = importlib.import_module(schema.remoteClass) 
+        module = importlib.import_module(schema.remoteClass)
         members = inspect.getmembers(module, inspect.isclass)
-        for m,n in members:
+        for m, n in members:
             try:
                 if n.__module__ == module.__name__:  return n
-            except: 
+            except:
                 log.warn("unable to run loadSchemaTarget for %s" % schema.remoteClass)
         return None
-    
+
     def import_class(self, name):
         '''find and return target class object'''
         m = importlib.import_module(name)

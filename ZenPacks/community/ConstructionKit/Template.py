@@ -23,18 +23,18 @@ class ZenPack(ZenPackConstruct):
     IMPORT_GLOBAL = """class %s(ClassHelper.%s):\n%s''''''\n"""
 
     BASE_CLASS = "%s%s" % (CONSTRUCT_IMPORT, IMPORT_GLOBAL)
-    
+
     ADD_CLASS = IMPORT_GLOBAL
 
     COMPONENT_INTERFACE = '''from Products.Zuul.interfaces.component import IComponentInfo\nclass %s(IComponentInfo):\n    """"""\n\n'''
-    
+
     DATASOURCE_INTERFACE = '''from Products.Zuul.interfaces import IRRDDataSourceInfo\nclass %s(IRRDDataSourceInfo):\n    """"""\n\n'''
-    
+
     FACADE_CLASS = '''from Products.Zuul.interfaces import IFacade\nclass %s(IFacade):%s""""""\n\n'''
-    
+
     ROUTER_CLASS = '''def _getFacade(self):\n%sfrom Products import Zuul\n%sreturn Zuul.getFacade('%s', self.context)\n\n'''
-    
-    ADDMETHOD='''
+
+    ADDMETHOD = '''
     from Products.ZenUtils.Utils import prepId
     from %s.%s import %s
     import re
@@ -59,8 +59,8 @@ class ZenPack(ZenPackConstruct):
 
     FACADEMETHOD = '''def %s(self, ob, **kwargs):\n    """"""
     from Products.Zuul.utils import ZuulMessageFactory as _t
-    target = ob\n%s\n    return True, _t("Added %s for device " + target.id)\n''' 
-    
+    target = ob\n%s\n    return True, _t("Added %s for device " + target.id)\n'''
+
     IFACADEMETHOD = '''def %s(self, ob, **kwargs):\n   """"""\n'''
 
     ROUTERMETHOD = '''def %s(self, **kwargs):
@@ -70,7 +70,7 @@ class ZenPack(ZenPackConstruct):
     success, message = facade.%s(ob, **kwargs)
     if success:  return DirectResponse.succeed(message)
     else: return DirectResponse.fail(message)\n'''
-    
+
     ON_COLLECTOR_INSTALLED = '''def onCollectorInstalled%s(ob, event):
     zpFriendly = %s
     errormsg = '{0} binary cannot be found on {1}. This is part of a ' + \
@@ -80,7 +80,7 @@ class ZenPack(ZenPackConstruct):
     if code:
         log.warn(errormsg.format(verifyBin, ob.hostname, zpFriendly))\n'''
 
-    CONFIGURE_START='''<?xml version="1.0" encoding="utf-8"?>
+    CONFIGURE_START = '''<?xml version="1.0" encoding="utf-8"?>
     <configure
         xmlns="http://namespaces.zope.org/zope"
         xmlns:browser="http://namespaces.zope.org/browser"
@@ -164,12 +164,12 @@ class ZenPack(ZenPackConstruct):
                 component=".info.%s"
                 name="%s"
             />\n'''
-                
+
     COMPONENT_VOLCABULARY_METHOD = '''def %s(context):\n    return SimpleVocabulary.fromValues(context.%s())\n\n'''
-        
+
     VOCABULARYMETHOD = '''from %s.datasources.%s import *\ndef %sRedirectVocabulary(context):\n    return SimpleVocabulary.fromValues(%s.onRedirectOptions)\n\n'''
- 
-    JS_DISPLAY='''\n(function(){
+
+    JS_DISPLAY = '''\n(function(){
     var ZC = Ext.ns('Zenoss.component');
 
     function render_link(ob) {
@@ -271,13 +271,13 @@ class ZenPack(ZenPackConstruct):
                 });
             });
         }()\n);\n'''
-    
-    JS_COLUMNS_START = [{'id': 'severity', 'dataIndex': 'severity', 'header': _t('Events'), 'renderer': "Zenoss.render.severity", 'sortable': 'true','width': 50},
+
+    JS_COLUMNS_START = [{'id': 'severity', 'dataIndex': 'severity', 'header': _t('Events'), 'renderer': "Zenoss.render.severity", 'sortable': 'true', 'width': 50},
                         {'id': 'name', 'dataIndex': 'name', 'header': _t('Name'), 'sortable': 'true', 'width': 70}]
-    
+
     JS_COLUMNS_FINISH = [{'id': 'monitored', 'dataIndex': 'monitored', 'header': _t('Monitored'), 'sortable': 'true', 'width': 65},
                          {'id': 'locking', 'dataIndex': 'locking', 'header': _t('Locking'), 'renderer': "Zenoss.render.locking_icons", 'sortable':'true', 'width': 65}]
-    
+
     JS_ADD_START = [{'name': 'uid'}, {'name': 'severity'}, {'name': 'status'}, {'name': 'name'}]
 
     JS_ADD_FINISH = [{'name': 'usesMonitorAttribute'}, {'name': 'monitor'}, {'name': 'monitored'}, {'name': 'locking'}]

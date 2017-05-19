@@ -30,8 +30,8 @@ class Rebuild(ZenScriptBase):
             c.buildZenPackFiles()
         else:
             c.rebuild()
-        #print "rebuilding relations"
-        #updateRelations(self.dmd,True)
+        # print "rebuilding relations"
+        # updateRelations(self.dmd,True)
 
 if __name__ == "__main__":
     u = Rebuild()
