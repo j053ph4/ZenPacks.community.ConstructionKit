@@ -62,7 +62,7 @@ class ClassHelper(object):
             try:
                 currents = [x[0] for x in self.classobject._relations] + [self.compname]
                 diffs = [x for x in p._relations if x[0] not in (currents)]
-                self.classobject._relations += tuple(diffs)
+                self.classobject._v_local_relations += tuple(diffs)
             except:  pass
         # set attributes for class
         for k, v in data.items():  setattr(self.classobject, k, v)
