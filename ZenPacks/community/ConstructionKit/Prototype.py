@@ -136,7 +136,7 @@ class Prototype(object):
         if self.is_datasource is False:
             # log.debug( self.classdata['class'])
             self.helper.componentClass(self.classdata['parents'], self.classdata['class'])
-            self.helper.classobject._relations += tuple(self.relmgr.fromrelations)
+            self.helper.classobject._v_local_relations += tuple(self.relmgr.fromrelations)
             self.helper.classobject._properties += tuple(self.classdata['_properties'])
 
             self.helper.classobject.factory_type_information = (

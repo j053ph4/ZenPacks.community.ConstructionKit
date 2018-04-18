@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from Products.ZenModel.OSComponent import OSComponent
 from Products.ZenModel.DeviceHW import DeviceHW
 from Products.ZenModel.MEProduct import MEProduct
@@ -11,6 +12,8 @@ from Products.ZenModel.ZenPackPersistence import ZenPackPersistence
 from Products.ZenModel.ManagedEntity import ManagedEntity
 from Products.ZenRelations.RelSchema import *
 from Products.ZenRelations.Exceptions import *
+from ZenPacks.zenoss.ZenPackLib.lib.base.ClassProperty import ClassProperty
+
 from transaction import commit
 
 import logging
@@ -39,7 +42,7 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
     isUserCreatedFlag = True
     status = 0
     compname = 'os'
-    _relations = OSComponent._relations + (
+    _v_local_relations = OSComponent._relations + (
         ("productClass", ToOne(ToMany, "Products.ZenModel.ProductClass", "instances")),
     )
 
@@ -68,6 +71,35 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
     '''
     required built-ins
     '''
+    @ClassProperty
+    @classmethod
+    def _relations(cls):
+        """Return _relations property
+
+        This is implemented as a property method to deal with cases
+        where ZenPacks loaded after ours in easy-install.pth monkeypatch
+        _relations on one of our base classes.
+
+        """
+
+        relations = OrderedDict()
+        for base in cls.__bases__:
+            base_relations = getattr(base, '_relations', [])
+            for base_name, base_schema in base_relations:
+                # In the case of multiple bases having relationships
+                # by the same name, we want to use the first one.
+                # This is consistent with Python method resolution
+                # order.
+                relations.setdefault(base_name, base_schema)
+
+        if hasattr(cls, '_v_local_relations'):
+            for local_name, local_schema in cls._v_local_relations:
+                # In the case of a local relationship having a
+                # relationship by the same name as one of the bases, we
+                # use the local relationship.
+                relations[local_name] = local_schema
+
+        return tuple(relations.items())
 
     def statusMap(self): return 0
 
@@ -415,7 +447,7 @@ class CustomHWComponent(DeviceHW, CustomComponent):
     isUserCreatedFlag = True
     status = 0
     compname = 'hw'
-    _relations = DeviceHW._relations
+    _v_local_relations = DeviceHW._relations
 
     factory_type_information = (
         {'id' : 'CustomHWComponent',
