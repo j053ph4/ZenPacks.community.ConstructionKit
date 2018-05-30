@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from Products.ZenModel.OSComponent import OSComponent
 from Products.ZenModel.DeviceHW import DeviceHW
 from Products.ZenModel.MEProduct import MEProduct
@@ -11,6 +12,8 @@ from Products.ZenModel.ZenPackPersistence import ZenPackPersistence
 from Products.ZenModel.ManagedEntity import ManagedEntity
 from Products.ZenRelations.RelSchema import *
 from Products.ZenRelations.Exceptions import *
+from ZenPacks.zenoss.ZenPackLib.lib.base.ClassProperty import ClassProperty
+
 from transaction import commit
 
 import logging
@@ -39,9 +42,7 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
     isUserCreatedFlag = True
     status = 0
     compname = 'os'
-    _relations = OSComponent._relations + (
-        ("productClass", ToOne(ToMany, "Products.ZenModel.ProductClass", "instances")),
-    )
+    _v_local_relations = ()
 
     factory_type_information = (
         {'id' : 'CustomComponent',
@@ -68,6 +69,35 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
     '''
     required built-ins
     '''
+    @ClassProperty
+    @classmethod
+    def _relations(cls):
+        """Return _relations property
+
+        This is implemented as a property method to deal with cases
+        where ZenPacks loaded after ours in easy-install.pth monkeypatch
+        _relations on one of our base classes.
+
+        """
+
+        relations = OrderedDict()
+        for base in cls.__bases__:
+            base_relations = getattr(base, '_relations', [])
+            for base_name, base_schema in base_relations:
+                # In the case of multiple bases having relationships
+                # by the same name, we want to use the first one.
+                # This is consistent with Python method resolution
+                # order.
+                relations.setdefault(base_name, base_schema)
+
+        if hasattr(cls, '_v_local_relations'):
+            for local_name, local_schema in cls._v_local_relations:
+                # In the case of a local relationship having a
+                # relationship by the same name as one of the bases, we
+                # use the local relationship.
+                relations[local_name] = local_schema
+
+        return tuple(relations.items())
 
     def statusMap(self): return 0
 
@@ -364,7 +394,7 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
         if newProductName: productName = newProductName
         prodobj = self.getDmdRoot("Manufacturers").createSoftwareProduct(
                                     productName, manufacturer, **kwargs)
-        self.productClass.addRelation(prodobj)
+        self.setProductClass.addRelation(prodobj)
         if REQUEST:
             messaging.IMessageSender(ob).sendToBrowser(
                 'Product Set',
@@ -385,15 +415,15 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
                 manufacturer = 'Unknown'
             manufs = self.getDmdRoot("Manufacturers")
             prodobj = manufs.createSoftwareProduct(prodKey, manufacturer)
-            self.productClass.addRelation(prodobj)
+            self.setProductClass(prodobj)
             # set product key for assocated components
             for a in self.getAssociates():
                 print "found assoc: %s" % a.id
                 if a.meta_type in ['OSProcess', 'IpService', 'WinService']:
-                    a.productClass.addRelation(prodobj)
+                    a.setProductClass(prodobj)
             # self.setAssociatedProductKey()
         else:
-            self.productClass.removeRelation()
+            self.setProductClass(None)
 
     def setAssociatedProductKey(self):
         """ Set the productClass relation for associated OSProcess, 
@@ -415,7 +445,7 @@ class CustomHWComponent(DeviceHW, CustomComponent):
     isUserCreatedFlag = True
     status = 0
     compname = 'hw'
-    _relations = DeviceHW._relations
+    _v_local_relations = DeviceHW._relations
 
     factory_type_information = (
         {'id' : 'CustomHWComponent',
