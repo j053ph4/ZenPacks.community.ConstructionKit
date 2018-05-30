@@ -42,9 +42,7 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
     isUserCreatedFlag = True
     status = 0
     compname = 'os'
-    _v_local_relations = OSComponent._relations + (
-        ("productClass", ToOne(ToMany, "Products.ZenModel.ProductClass", "instances")),
-    )
+    _v_local_relations = ()
 
     factory_type_information = (
         {'id' : 'CustomComponent',
@@ -396,7 +394,7 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
         if newProductName: productName = newProductName
         prodobj = self.getDmdRoot("Manufacturers").createSoftwareProduct(
                                     productName, manufacturer, **kwargs)
-        self.productClass.addRelation(prodobj)
+        self.setProductClass.addRelation(prodobj)
         if REQUEST:
             messaging.IMessageSender(ob).sendToBrowser(
                 'Product Set',
@@ -417,15 +415,15 @@ class CustomComponent(OSComponent, ManagedEntity, MEProduct, ZenPackPersistence)
                 manufacturer = 'Unknown'
             manufs = self.getDmdRoot("Manufacturers")
             prodobj = manufs.createSoftwareProduct(prodKey, manufacturer)
-            self.productClass.addRelation(prodobj)
+            self.setProductClass(prodobj)
             # set product key for assocated components
             for a in self.getAssociates():
                 print "found assoc: %s" % a.id
                 if a.meta_type in ['OSProcess', 'IpService', 'WinService']:
-                    a.productClass.addRelation(prodobj)
+                    a.setProductClass(prodobj)
             # self.setAssociatedProductKey()
         else:
-            self.productClass.removeRelation()
+            self.setProductClass(None)
 
     def setAssociatedProductKey(self):
         """ Set the productClass relation for associated OSProcess, 

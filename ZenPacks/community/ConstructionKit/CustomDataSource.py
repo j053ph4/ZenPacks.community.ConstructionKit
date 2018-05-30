@@ -54,12 +54,12 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
             ob = 'string:%s' % ob
         return talesCompile(ob)
 
-    def getComponent(self, context, component=None):
+    def getComponent(self, context, component=None, device=None):
         ''' Return localized component. '''
         # choose default if not provided
         if component is None: component = self.component
         compiled = self.getTALES(component)
-        d = context.device()
+        d = device if device is not None else context.device()
         environ = {
                    'dev' : d,
                    'device': d,
@@ -98,7 +98,7 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
         ''''''
         return '${here/%s}' % prop_id
 
-    def getCommand(self, context, cmd=None):
+    def getCommand(self, context, cmd=None, device=None):
         ''' generate the plugin command '''
         if self.cmdFile is not None:  # this uses an external script
             cmd = binPath(self.cmdFile)
@@ -113,7 +113,7 @@ class CustomDataSource(ZenPackPersistence, RRDDataSource):
             if cmd is None: cmd = self.commandTemplate
             if len(cmd) == 0: cmd = self.command
             compiled = self.getTALES(cmd)
-            d = context.device()
+            d = device if device is not None else context.device()
             environ = {'dev' : d,
                        'device': d,
                        'devname': d.id,
